@@ -162,7 +162,7 @@ function Hero({ onNav }) {
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 16px", opacity: 0, animation: "fadeSlideUp 0.8s ease 0.4s forwards" }}>
           Isaiah Thompson<br />
           <span style={{ color: GOLD }}>Ocansey</span>
-          <span style={{ fontSize: "clamp(14px, 2vw, 18px)", fontWeight: 400, color: "rgba(255,255,255,0.5)", verticalAlign: "super", marginLeft: 8, fontFamily: "'DM Sans', sans-serif" }}>ABD</span>
+          <span style={{ fontSize: "clamp(14px, 2vw, 18px)", fontWeight: 400, color: "rgba(255,255,255,0.5)", verticalAlign: "super", marginLeft: 8, fontFamily: "'DM Sans', sans-serif" }}>Ph.D.</span>
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(15px, 2vw, 18px)", color: "rgba(255,255,255,0.6)", lineHeight: 1.7, maxWidth: 600, margin: "0 auto 40px", opacity: 0, animation: "fadeSlideUp 0.8s ease 0.6s forwards" }}>
           Ph.D. Candidate in Data Science at UTEP with 5+ years driving business value through advanced analytics, predictive modeling, and AI-powered solutions. Published in IEEE TNNLS. $450K+ in competitive research funding secured.
