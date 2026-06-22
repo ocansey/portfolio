@@ -77,18 +77,27 @@ const education = [
 const publications = [
   {
     authors: "Ocansey, I.T., Bhattacharya, R., Sen, T.",
+    title: "DP-FlogTinyLLM: Differentially private federated log anomaly detection using Tiny LLMs",
+    venue: "International Journal of Data Science - Under Review"
+  },
+{
+    authors: "Ocansey, I.T., Bhattacharya, R., Sen, T.",
     title: "LogTinyLLM: Contextual Log Anomaly Detection Using Tiny LLMs",
-    venue: "IEEE Transactions on Neural Networks and Learning Systems (2025)"
+    venue: "Annals of Data Science - Under Review)"
   },
+
+
+
+  
   {
     authors: "Ocansey, I.T.",
-    title: "Deep Learning Approaches for Financial Anomaly Detection",
-    venue: "ICMLA 2024"
+    title: "Log Anomaly Detection With Parameter-Efficient Tiny Language Models: From Centralized Fine-Tuning to Privacy-Preserving Federated Learning",
+    venue: "Proquest 2026"
   },
   {
-    authors: "Ocansey, I.T.",
-    title: "Generative AI in High-Dimensional Statistical Systems",
-    venue: "Research Publication"
+    authors: "Zeliatu Ahmed, Aisha Mohammed Suleiman, Abimbola Filani, Isaiah Thompson Ocansey, Alice Ama Donkor.",
+    title: "The Role of Advanced Machine Learning Algorithms in Detecting and Mitigating Cybersecurity Threats within United States Healthcare Digital Infrastructure: A Comprehensive Vulnerability Analysis",
+    venue: "Journal Of Engineering And Computer Sciences"
   }
 ];
 
@@ -236,7 +245,7 @@ function Hero({ onNav }) {
           lineHeight: 1.7,
           fontSize: 16
         }}>
-          Ph.D. in Data Science specialized in machine learning, anomaly detection, and scalable AI systems.
+          Ph.D. in Data Science  with specialization in machine learning, anomaly detection, and scalable AI systems.
           Experienced in building production-level LLM systems, federated learning architectures, and enterprise analytics
           solutions with measurable academic and industrial impact.
         </p>
