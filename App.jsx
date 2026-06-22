@@ -1,49 +1,138 @@
 import { useState, useEffect, useRef } from "react";
 
-const ACCENT = "#0F2B46";
-const ACCENT_LIGHT = "#1A4A73";
+/* ---------------- EXECUTIVE THEME ---------------- */
+const NAVY = "#0B1F33";
+const NAVY_2 = "#102A43";
 const GOLD = "#C8A45A";
-const WARM_WHITE = "#FAF8F5";
-const SOFT_GRAY = "#E8E4DF";
-const TEXT_DARK = "#1A1A1A";
-const TEXT_MED = "#4A4A4A";
-const TEXT_LIGHT = "#7A7A7A";
+const IVORY = "#FAF8F5";
+const CARD = "#FFFFFF";
+const TEXT = "#1A1A1A";
+const MUTED = "#5B6770";
 
 const sections = ["About", "Experience", "Education", "Research", "Skills", "Contact"];
 
-/* ---------------- DATA (UNCHANGED) ---------------- */
+/* ---------------- EXPERIENCE ---------------- */
+const experience = [
+  {
+    title: "Graduate Research Assistant",
+    org: "University of Texas at El Paso – Department of Mathematical Sciences",
+    location: "El Paso, TX",
+    dates: "Jan 2022 – Present",
+    bullets: [
+      "Developed LogTinyLLM for real-time anomaly detection achieving 98%+ accuracy with reduced computational cost",
+      "Built federated learning frameworks for privacy-preserving machine learning in distributed environments",
+      "Designed clustering-based models (K-Means, Hierarchical) for financial and operational risk segmentation"
+    ],
+  },
+  {
+    title: "Data Analytics Consultant",
+    org: "University of Texas at El Paso – Graduate School",
+    location: "El Paso, TX",
+    dates: "May 2023 – Aug 2024",
+    bullets: [
+      "Improved institutional enrollment strategy resulting in a 15% increase in graduate admissions",
+      "Developed executive-level Power BI dashboards reducing reporting workload by 40%",
+      "Provided data-driven insights to senior leadership for strategic decision-making"
+    ],
+  },
+  {
+    title: "Technical Specialist – Data Analytics",
+    org: "AT&T Inc.",
+    location: "Prague, Czech Republic",
+    dates: "Aug 2018 – Dec 2021",
+    bullets: [
+      "Improved customer satisfaction (NPS +20%) using predictive analytics models",
+      "Optimized performance across 500+ network sites improving operational efficiency by 18%",
+      "Led analytics team of 8 supporting enterprise-wide statistical process control systems"
+    ],
+  }
+];
 
-const experience = [/* same as yours */];
-const education = [/* same as yours */];
-const publications = [/* same as yours */];
-const skillCategories = [/* same as yours */];
-const awards = [/* same as yours */];
+/* ---------------- EDUCATION ---------------- */
+const education = [
+  {
+    degree: "Ph.D. in Data Science",
+    school: "University of Texas at El Paso",
+    date: "May 2026",
+    detail: "Dissertation: Multi-modal Anomaly Detection Using Deep Learning"
+  },
+  {
+    degree: "M.S. Mathematics of Finance & Economics",
+    school: "University of Silesia, Poland",
+    date: "2017"
+  },
+  {
+    degree: "M.S. Engineering Mathematics",
+    school: "University of L’Aquila, Italy",
+    date: "2017"
+  },
+  {
+    degree: "B.S. Financial Mathematics",
+    school: "University for Development Studies, Ghana",
+    date: "2015"
+  }
+];
 
-/* ---------------- UTIL HOOKS ---------------- */
+/* ---------------- PUBLICATIONS ---------------- */
+const publications = [
+  {
+    authors: "Ocansey, I.T., Bhattacharya, R., Sen, T.",
+    title: "LogTinyLLM: Contextual Log Anomaly Detection Using Tiny LLMs",
+    venue: "IEEE Transactions on Neural Networks and Learning Systems (2025)"
+  },
+  {
+    authors: "Ocansey, I.T.",
+    title: "Deep Learning Approaches for Financial Anomaly Detection",
+    venue: "ICMLA 2024"
+  },
+  {
+    authors: "Ocansey, I.T.",
+    title: "Generative AI in High-Dimensional Statistical Systems",
+    venue: "Research Publication"
+  }
+];
 
-function useInView(threshold = 0.15) {
+/* ---------------- SKILLS ---------------- */
+const skillCategories = [
+  {
+    label: "Programming",
+    items: ["Python", "R", "SQL", "MATLAB", "LaTeX"]
+  },
+  {
+    label: "Machine Learning & AI",
+    items: ["PyTorch", "TensorFlow", "Scikit-learn", "XGBoost", "Hugging Face", "LLMs"]
+  },
+  {
+    label: "Cloud & Data Systems",
+    items: ["AWS", "Azure", "Spark", "Databricks", "Docker", "Git"]
+  },
+  {
+    label: "Analytics & Modeling",
+    items: ["Power BI", "Tableau", "Time Series", "Bayesian Modeling", "A/B Testing"]
+  }
+];
+
+/* ---------------- UTIL ---------------- */
+function useInView() {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) {
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
         setVisible(true);
         obs.disconnect();
       }
-    }, { threshold });
+    });
 
-    obs.observe(el);
+    if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
-  }, [threshold]);
+  }, []);
 
   return [ref, visible];
 }
 
-function FadeIn({ children, delay = 0 }) {
+function FadeIn({ children }) {
   const [ref, visible] = useInView();
 
   return (
@@ -51,8 +140,8 @@ function FadeIn({ children, delay = 0 }) {
       ref={ref}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(32px)",
-        transition: `all 0.7s ease ${delay}s`,
+        transform: visible ? "translateY(0)" : "translateY(25px)",
+        transition: "0.7s ease"
       }}
     >
       {children}
@@ -61,35 +150,25 @@ function FadeIn({ children, delay = 0 }) {
 }
 
 /* ---------------- NAV ---------------- */
-
-function Nav({ active, onNav }) {
+function Nav({ onNav }) {
   return (
     <nav style={{
       position: "fixed",
       top: 0,
-      left: 0,
-      right: 0,
-      background: "rgba(15,43,70,0.97)",
-      zIndex: 100,
-      padding: "14px 32px",
+      width: "100%",
+      background: NAVY,
+      padding: "14px 28px",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      borderBottom: "1px solid rgba(200,164,90,0.15)"
+      zIndex: 1000,
+      borderBottom: "1px solid rgba(200,164,90,0.2)"
     }}>
-      <div
-        style={{
-          color: GOLD,
-          fontWeight: 700,
-          cursor: "pointer",
-          fontFamily: "serif"
-        }}
-        onClick={() => onNav("About")}
-      >
+      <div style={{ color: GOLD, fontWeight: 700, letterSpacing: 1 }}>
         ITO
       </div>
 
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 16 }}>
         {sections.map(s => (
           <button
             key={s}
@@ -97,9 +176,10 @@ function Nav({ active, onNav }) {
             style={{
               background: "transparent",
               border: "none",
-              color: active === s ? GOLD : "#ccc",
+              color: "white",
+              fontSize: 13,
               cursor: "pointer",
-              fontSize: 13
+              opacity: 0.85
             }}
           >
             {s}
@@ -110,214 +190,174 @@ function Nav({ active, onNav }) {
   );
 }
 
-/* ---------------- HERO (UPDATED PROFESSIONAL INTRO) ---------------- */
-
+/* ---------------- HERO ---------------- */
 function Hero({ onNav }) {
   return (
-    <section
-      id="About"
-      style={{
-        minHeight: "100vh",
-        background: `linear-gradient(135deg, ${ACCENT}, #061422)`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        padding: "120px 24px"
-      }}
-    >
-      <div style={{ maxWidth: 850 }}>
+    <section style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: `linear-gradient(135deg, ${NAVY}, #061424)`
+    }}>
+      <div style={{ textAlign: "center", maxWidth: 900 }}>
 
-        {/* PROFILE IMAGE */}
+        {/* EXECUTIVE PHOTO */}
         <img
           src="/Photo.png"
-          alt="Isaiah Thompson Ocansey"
+          alt="Profile"
           style={{
-            width: 160,
-            height: 160,
+            width: 280,
+            height: 280,
             borderRadius: "50%",
             objectFit: "cover",
-            boxShadow: "0 12px 35px rgba(0,0,0,0.4)",
-            border: "2px solid rgba(200,164,90,0.5)",
-            marginBottom: 24
+            border: `4px solid ${GOLD}`,
+            boxShadow: "0 25px 70px rgba(0,0,0,0.6)"
           }}
         />
 
-        {/* WELCOME HEADING */}
         <h1 style={{
-          fontFamily: "serif",
-          fontSize: "clamp(36px, 5vw, 60px)",
-          color: "#fff",
-          marginBottom: 16,
-          lineHeight: 1.1
+          color: "white",
+          fontSize: 52,
+          marginTop: 24,
+          fontWeight: 700
         }}>
-          Welcome to my professional portfolio<br />
-          <span style={{ color: GOLD }}>
-            Isaiah Thompson Ocansey, Ph.D.
-          </span>
+          Isaiah Thompson Ocansey, Ph.D.
         </h1>
 
-        {/* SUBTITLE */}
+        <h3 style={{ color: GOLD, marginTop: 8 }}>
+          Data Scientist • Machine Learning Engineer • Researcher
+        </h3>
+
         <p style={{
-          color: "rgba(255,255,255,0.7)",
-          fontSize: 17,
+          color: "#C9D6E3",
+          maxWidth: 750,
+          margin: "20px auto",
           lineHeight: 1.7,
-          maxWidth: 700,
-          margin: "0 auto 30px"
+          fontSize: 16
         }}>
-          I am a Data Scientist specialized in machine learning, Deep Learning,
-          statistical modeling, and AI-driven anomaly detection systems. My research
-          focuses on transforming complex data into reliable, real-world intelligence.
+          Ph.D. in Data Science specialized in machine learning, anomaly detection, and scalable AI systems.
+          Experienced in building production-level LLM systems, federated learning architectures, and enterprise analytics
+          solutions with measurable academic and industrial impact.
         </p>
 
-        {/* CTA BUTTONS */}
-        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <button
-            onClick={() => onNav("Contact")}
-            style={{
-              background: GOLD,
-              color: ACCENT,
-              border: "none",
-              padding: "12px 26px",
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: "pointer"
-            }}
-          >
-            Contact Me
-          </button>
-
-          <button
-            onClick={() => onNav("Experience")}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.3)",
-              color: "#fff",
-              padding: "12px 26px",
-              borderRadius: 8,
-              cursor: "pointer"
-            }}
-          >
-            View Experience
-          </button>
-        </div>
+        <button
+          onClick={() => onNav("Contact")}
+          style={{
+            marginTop: 18,
+            padding: "12px 30px",
+            background: GOLD,
+            border: "none",
+            borderRadius: 8,
+            fontWeight: 600,
+            cursor: "pointer"
+          }}
+        >
+          Contact
+        </button>
       </div>
     </section>
   );
 }
 
-/* ---------------- SECTION WRAPPER ---------------- */
-
-function Section({ id, title, subtitle, children, dark }) {
+/* ---------------- SECTION ---------------- */
+function Section({ id, title, children, dark }) {
   return (
-    <section
-      id={id}
-      style={{
-        padding: "90px 24px",
-        background: dark ? ACCENT : WARM_WHITE
-      }}
-    >
-      <div style={{ maxWidth: 1000, margin: "auto" }}>
-        <FadeIn>
-          <h2 style={{
-            fontSize: 32,
-            marginBottom: 10,
-            color: dark ? "#fff" : TEXT_DARK
-          }}>
-            {title}
-          </h2>
-          <p style={{ color: GOLD, marginBottom: 30 }}>{subtitle}</p>
-        </FadeIn>
-
+    <section id={id} style={{
+      padding: "90px 24px",
+      background: dark ? NAVY_2 : IVORY
+    }}>
+      <div style={{ maxWidth: 1050, margin: "auto" }}>
+        <h2 style={{
+          color: dark ? "white" : TEXT,
+          fontSize: 28,
+          marginBottom: 20
+        }}>
+          {title}
+        </h2>
         {children}
       </div>
     </section>
   );
 }
 
-/* ---------------- CONTACT (UPGRADED OFFICIAL STYLE) ---------------- */
-
-function Contact() {
+/* ---------------- EXPERIENCE CARD ---------------- */
+function ExperienceCard({ item }) {
   return (
-    <Section id="Contact" title="Let’s Connect" subtitle="Contact">
-      <div style={{
-        background: "#fff",
-        padding: 40,
-        borderRadius: 12,
-        textAlign: "center"
-      }}>
-        <p style={{ marginBottom: 24, color: TEXT_MED, lineHeight: 1.7 }}>
-          I welcome professional inquiries, collaboration opportunities, and research discussions.
-          Feel free to reach out directly via email.
-        </p>
+    <div style={{
+      background: CARD,
+      padding: 22,
+      borderRadius: 12,
+      marginBottom: 14,
+      border: "1px solid #E6E6E6"
+    }}>
+      <h3 style={{ marginBottom: 4 }}>{item.title}</h3>
+      <p style={{ color: MUTED }}>{item.org}</p>
+      <small>{item.dates} • {item.location}</small>
 
-        {/* EMAIL BUTTON */}
-        <a
-          href="mailto:ocanthom@gmail.com?subject=Professional%20Inquiry"
-          style={{
-            display: "inline-block",
-            background: GOLD,
-            color: ACCENT,
-            padding: "12px 26px",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontWeight: 600,
-            marginBottom: 20
-          }}
-        >
-          Send Email
-        </a>
-
-        <div style={{ marginTop: 20, color: TEXT_MED }}>
-          📧 ocanthom@gmail.com
-        </div>
-      </div>
-    </Section>
+      <ul style={{ marginTop: 10 }}>
+        {item.bullets.map((b, i) => (
+          <li key={i} style={{ marginBottom: 6 }}>{b}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
-/* ---------------- MAIN APP ---------------- */
-
+/* ---------------- APP ---------------- */
 export default function App() {
-  const [active, setActive] = useState("About");
-
   const onNav = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    setActive(id);
   };
 
   return (
-    <div style={{ fontFamily: "sans-serif" }}>
-      <Nav active={active} onNav={onNav} />
+    <>
+      <Nav onNav={onNav} />
 
       <Hero onNav={onNav} />
 
-      <Section id="Experience" title="Professional Experience" subtitle="Career">
-        <p>/* your experience cards remain unchanged */</p>
+      <Section id="Experience" title="Professional Experience">
+        {experience.map((e, i) => (
+          <ExperienceCard key={i} item={e} />
+        ))}
       </Section>
 
-      <Section id="Education" title="Academic Background" subtitle="Education" dark>
-        <p>/* unchanged */</p>
+      <Section id="Education" title="Academic Background" dark>
+        {education.map((e, i) => (
+          <div key={i} style={{ color: "white", marginBottom: 12 }}>
+            <b>{e.degree}</b> — {e.school} ({e.date})
+            {e.detail && <div style={{ color: "#B8C7D6" }}>{e.detail}</div>}
+          </div>
+        ))}
       </Section>
 
-      <Section id="Research" title="Publications & Awards" subtitle="Research">
-        <p>/* unchanged */</p>
+      <Section id="Research" title="Publications">
+        {publications.map((p, i) => (
+          <div key={i} style={{
+            background: CARD,
+            padding: 16,
+            marginBottom: 10,
+            borderRadius: 10
+          }}>
+            <b>{p.authors}</b>
+            <div><i>{p.title}</i></div>
+            <div>{p.venue}</div>
+          </div>
+        ))}
       </Section>
 
-      <Section id="Skills" title="Technical Skills" subtitle="Capabilities" dark>
-        <p>/* unchanged */</p>
+      <Section id="Skills" title="Technical Skills" dark>
+        {skillCategories.map((c, i) => (
+          <div key={i} style={{ marginBottom: 14 }}>
+            <h4 style={{ color: GOLD }}>{c.label}</h4>
+            <p style={{ color: "#D6E2EF" }}>{c.items.join(" • ")}</p>
+          </div>
+        ))}
       </Section>
 
-      <Contact />
-
-      <footer style={{
-        textAlign: "center",
-        padding: 20,
-        background: ACCENT,
-        color: "#aaa"
-      }}>
-        © 2026 Isaiah Thompson Ocansey. All rights reserved.
-      </footer>
-    </div>
+      <Section id="Contact" title="Contact">
+        <p>Email: <b>ocanthom@gmail.com</b></p>
+      </Section>
+    </>
   );
 }
