@@ -1,0 +1,2662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Label Budget — Isaiah Thompson Ocansey</title>
+<meta name="description" content="An Isolation Forest needs no labels. Gradient boosting and an RBF-SVM need thousands. This runs the experiment live in your browser on synthetic network telemetry to find where the line crosses — and how much analyst time you save by letting the unsupervised model choose what to label.">
+<meta name="author" content="Isaiah Thompson Ocansey">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://ocansey.github.io/label-budget/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2712%27%20fill%3D%27%230D1416%27%2F%3E%3Cpath%20d%3D%27M10%2046%20L24%2042%20L34%2028%20L44%2020%20L54%2016%27%20fill%3D%27none%27%20stroke%3D%27%23C2410C%27%20stroke-width%3D%275%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M10%2034%20L54%2034%27%20stroke%3D%27%230284A8%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20stroke-dasharray%3D%277%206%27%2F%3E%3C%2Fsvg%3E">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Isaiah Thompson Ocansey">
+<meta property="og:title" content="The Label Budget">
+<meta property="og:description" content="An Isolation Forest needs no labels. Gradient boosting and an RBF-SVM need thousands. This runs the experiment live in your browser on synthetic network telemetry to find where the line crosses — and how much analyst time you save by letting the unsupervised model choose what to label.">
+<meta property="og:url" content="https://ocansey.github.io/label-budget/">
+<meta property="og:image" content="https://ocansey.github.io/label-budget/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Average precision against number of labelled flows: two supervised curves climbing past a flat Isolation Forest reference line.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Label Budget">
+<meta name="twitter:description" content="An Isolation Forest needs no labels. Gradient boosting and an RBF-SVM need thousands. This runs the experiment live in your browser on synthetic network telemetry to find where the line crosses — and how much analyst time you save by letting the unsupervised model choose what to label.">
+<meta name="twitter:image" content="https://ocansey.github.io/label-budget/og.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root {
+  color-scheme: light;
+  --plane:      #EDF1F2;
+  --surface:    #FAFBFB;
+  --surface-2:  #F2F5F6;
+  --ink:        #0D1416;
+  --ink-2:      #495558;
+  --muted:      #7B888B;
+  --grid:       #E2E8E9;
+  --rule:       #CBD5D7;
+  --rule-soft:  #DDE4E5;
+  --s-iso:      #0284A8;
+  --s-gbm:      #C2410C;
+  --s-svm:      #7C3AED;
+  --band:       0.13;
+  --chip:       #E6ECED;
+  --good:       #0CA30C;
+  --critical:   #D03B3B;
+  --shadow:     0 1px 2px rgba(13,20,22,.05), 0 8px 24px -12px rgba(13,20,22,.16);
+
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:    "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane:     #0A0E10;
+    --surface:   #141A1C;
+    --surface-2: #1B2225;
+    --ink:       #EEF3F3;
+    --ink-2:     #A3B0B3;
+    --muted:     #77858A;
+    --grid:      #212A2D;
+    --rule:      #2F3A3D;
+    --rule-soft: #242D30;
+    --s-iso:     #1795BA;
+    --s-gbm:     #DE6B33;
+    --s-svm:     #957EF7;
+    --band:      0.18;
+    --chip:      #202829;
+    --shadow:    0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:     #0A0E10;
+  --surface:   #141A1C;
+  --surface-2: #1B2225;
+  --ink:       #EEF3F3;
+  --ink-2:     #A3B0B3;
+  --muted:     #77858A;
+  --grid:      #212A2D;
+  --rule:      #2F3A3D;
+  --rule-soft: #242D30;
+  --s-iso:     #1795BA;
+  --s-gbm:     #DE6B33;
+  --s-svm:     #957EF7;
+  --band:      0.18;
+  --chip:      #202829;
+  --shadow:    0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+.prose { max-width: 64ch; }
+
+/* ---------------------------------------------------------- masthead */
+
+header.masthead {
+  padding: 64px 0 34px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.eyebrow {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+h1 {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  line-height: .96;
+  letter-spacing: -.035em;
+  margin: 0;
+  text-wrap: balance;
+}
+.deck {
+  font-size: clamp(1.05rem, 2.2vw, 1.28rem);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 60ch;
+  margin: 0;
+}
+.deck strong { color: var(--ink); font-weight: 600; }
+.byline {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .02em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.byline b { color: var(--ink-2); font-weight: 500; }
+
+dl.spec {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 0 24px;
+}
+dl.spec > div { background: var(--surface); padding: 13px 14px 12px; }
+dl.spec dt {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+dl.spec dd {
+  font-family: var(--f-display); font-weight: 600; font-size: 1.18rem;
+  letter-spacing: -.015em; margin: 0; line-height: 1.1;
+}
+dl.spec dd small {
+  display: block; font-family: var(--f-mono); font-weight: 400; font-size: 10.5px;
+  color: var(--muted); letter-spacing: 0; margin-top: 4px;
+}
+
+/* ------------------------------------------------------------ sections */
+
+section { padding-top: 56px; }
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.sec-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 2px 6px;
+  flex: none;
+}
+h2 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.4vw, 2rem);
+  letter-spacing: -.02em;
+  line-height: 1.1;
+  margin: 0;
+  text-wrap: balance;
+}
+h3 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -.01em;
+  margin: 0 0 6px;
+}
+p { margin: 0 0 1em; }
+p:last-child { margin-bottom: 0; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.panel-pad { padding: 22px 24px; }
+
+/* -------------------------------------------------------------- controls */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 28px;
+  align-items: flex-start;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.ctl { display: flex; flex-direction: column; gap: 7px; }
+.ctl-label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.seg { display: flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.seg button {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  padding: 7px 13px;
+  background: transparent;
+  color: var(--ink-2);
+  border: 0;
+  border-right: 1px solid var(--rule);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s ease, color .12s ease;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--chip); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.seg button:focus-visible { outline: 2px solid var(--s-svm); outline-offset: -2px; }
+
+.btn {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.btn:hover { background: var(--chip); }
+.btn:focus-visible { outline: 2px solid var(--s-svm); outline-offset: 1px; }
+.btn[disabled] { opacity: .45; cursor: progress; }
+
+.strategy-note {
+  font-size: 15px;
+  color: var(--ink-2);
+  padding: 13px 24px;
+  border-bottom: 1px solid var(--rule-soft);
+  background: var(--surface-2);
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- chart */
+
+.chart-scroll { overflow-x: auto; }
+svg.chart { display: block; width: 100%; min-width: 600px; height: auto; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 0 24px 18px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.swatch.dash {
+  height: 0; border-top: 3px dashed currentColor; border-radius: 0; width: 16px;
+}
+
+.runbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 24px;
+  border-top: 1px solid var(--rule-soft);
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+.runbar .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--s-gbm); flex: none;
+}
+.runbar.idle .dot { background: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .runbar:not(.idle) .dot { animation: pulse 1.1s ease-in-out infinite; }
+}
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+.bar-track {
+  flex: 1; display: block; height: 2px; background: var(--grid);
+  border-radius: 2px; overflow: hidden;
+}
+.bar-fill {
+  display: block; height: 100%; background: var(--ink-2); width: 0%;
+  transition: width .2s ease, background .3s ease;
+}
+.runbar.idle .bar-fill { background: var(--rule-soft); }
+
+/* ---------------------------------------------------------------- queue */
+
+.live-pill {
+  font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; padding: 3px 7px; border-radius: 2px;
+  border: 1px solid currentColor; color: var(--good); flex: none;
+}
+.live-pill.paused { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .live-pill:not(.paused) { animation: pulse 1.6s ease-in-out infinite; }
+}
+
+.qstats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px; background: var(--rule-soft); border-bottom: 1px solid var(--rule-soft);
+}
+.qstat { background: var(--surface); padding: 14px 18px 13px; }
+.qstat .k {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 7px;
+}
+.qstat .v {
+  font-family: var(--f-display); font-weight: 600; font-size: 1.62rem; line-height: 1;
+  letter-spacing: -.02em; display: block; font-variant-numeric: tabular-nums;
+}
+.qstat .s {
+  font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-2);
+  display: block; margin-top: 6px; line-height: 1.4;
+}
+
+.qmain { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+@media (max-width: 860px) { .qmain { grid-template-columns: minmax(0, 1fr); } }
+.qfeed { border-left: 1px solid var(--rule-soft); display: flex; flex-direction: column; }
+@media (max-width: 860px) { .qfeed { border-left: 0; border-top: 1px solid var(--rule-soft); } }
+.qfeed-head {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); padding: 14px 16px 10px; border-bottom: 1px solid var(--rule-soft);
+}
+.qfeed ul { list-style: none; margin: 0; padding: 0; flex: 1; }
+.qfeed li {
+  display: flex; align-items: center; gap: 9px; padding: 7px 16px;
+  font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-2);
+  border-bottom: 1px solid var(--rule-soft); white-space: nowrap;
+}
+.qfeed li:last-child { border-bottom: 0; }
+.qfeed li .d { width: 7px; height: 7px; border-radius: 50%; background: var(--rule); flex: none; }
+.qfeed li.atk { color: var(--ink); }
+.qfeed li.atk .d { background: var(--critical); }
+.qfeed li .who { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.qfeed li .lab {
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.qfeed li.atk .lab { color: var(--critical); }
+@media (prefers-reduced-motion: no-preference) {
+  .qfeed li.new { animation: slidein .28s ease; }
+}
+@keyframes slidein { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
+
+.qbanner {
+  margin: 0; padding: 14px 20px; font-size: 15px; line-height: 1.5;
+  border-top: 1px solid var(--rule-soft); background: var(--surface-2); color: var(--ink-2);
+}
+.qbanner b { color: var(--ink); font-weight: 600; }
+.qbanner.hit { border-left: 3px solid var(--good); }
+.qbanner.dry { border-left: 3px solid var(--critical); }
+
+/* ----------------------------------------------------------- stat tiles */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
+  gap: 1px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+.tile { background: var(--surface); padding: 18px 20px 16px; }
+.tile-k {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 9px;
+}
+.tile-v {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -.02em;
+  display: block;
+}
+.tile-s {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+  display: block;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------- budget slider */
+
+.scrub { padding: 18px 24px 20px; border-top: 1px solid var(--rule-soft); }
+.scrub-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.scrub-val {
+  font-family: var(--f-mono); font-size: 13px; color: var(--ink);
+  font-weight: 500;
+}
+.scrub-val em { font-style: normal; color: var(--muted); }
+input[type=range] {
+  width: 100%; accent-color: var(--ink); cursor: pointer; margin: 0;
+}
+input[type=range]:focus-visible { outline: 2px solid var(--s-svm); outline-offset: 4px; }
+
+/* ------------------------------------------------------------ arch table */
+
+.arch { width: 100%; border-collapse: collapse; font-family: var(--f-mono); font-size: 12.5px; }
+.arch th {
+  text-align: left; font-weight: 500; font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); padding: 0 10px 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.arch th.num, .arch td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.arch td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
+.arch tr:last-child td { border-bottom: 0; }
+.arch .name { color: var(--ink); white-space: nowrap; }
+.arch .cover { width: 46%; min-width: 150px; }
+.barset { display: flex; flex-direction: column; gap: 2px; }
+.brow { display: flex; align-items: center; gap: 7px; }
+.btrack {
+  flex: 1; display: block; height: 7px; background: var(--grid);
+  border-radius: 0 2px 2px 0; overflow: hidden;
+}
+.bfill {
+  display: block; height: 100%; border-radius: 0 2px 2px 0;
+  transition: width .35s ease;
+}
+.bnum {
+  font-size: 10.5px; color: var(--ink-2); width: 30px; text-align: right;
+  font-variant-numeric: tabular-nums; flex: none;
+}
+.tag {
+  display: inline-block; font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 2px; border: 1px solid var(--rule); color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .ctl { width: 100%; min-width: 0; }
+  #seg-strat, #qseg-strat { flex-direction: column; align-items: stretch; }
+  #seg-strat button, #qseg-strat button {
+    border-right: 0; border-bottom: 1px solid var(--rule); text-align: left;
+  }
+  #seg-strat button:last-child, #qseg-strat button:last-child { border-bottom: 0; }
+  .controls { padding: 16px 18px; }
+  .strategy-note, .legend, .runbar, .scrub { padding-left: 18px; padding-right: 18px; }
+  .qstat { padding: 13px 16px 12px; }
+  .qbanner { padding: 13px 16px; }
+  .wrap { padding: 0 18px 72px; }
+}
+
+/* --------------------------------------------------------------- misc */
+
+.grid2 {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+}
+.note {
+  font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--muted);
+}
+.inline-num {
+  font-family: var(--f-mono); font-size: 15px; width: 3.4em; padding: 2px 5px;
+  border: 1px solid var(--rule); border-radius: 3px; background: var(--surface-2);
+  color: var(--ink); text-align: center;
+}
+.inline-num:focus-visible { outline: 2px solid var(--s-svm); outline-offset: 1px; }
+kbd {
+  font-family: var(--f-mono); font-size: .85em; background: var(--chip);
+  padding: 1px 5px; border-radius: 3px; border: 1px solid var(--rule-soft);
+}
+.mono { font-family: var(--f-mono); font-size: .9em; }
+ul.tight { margin: 0 0 1em; padding-left: 1.15em; }
+ul.tight li { margin-bottom: .45em; }
+footer {
+  margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--rule);
+  font-family: var(--f-mono); font-size: 11.5px; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between;
+}
+.tt {
+  position: absolute; pointer-events: none; opacity: 0; transform: translateY(-2px);
+  transition: opacity .1s ease; background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 3px; box-shadow: var(--shadow); padding: 9px 11px;
+  font-family: var(--f-mono); font-size: 11.5px; line-height: 1.55; color: var(--ink-2);
+  z-index: 5; white-space: nowrap;
+}
+.tt b { color: var(--ink); font-weight: 500; }
+.tt .k { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.chart-host { position: relative; min-width: 0; }
+</style>
+</head>
+<body>
+<a href="../../#projects" style="position:fixed;bottom:16px;left:16px;z-index:99999;background:#0B1F33;color:#C8A45A;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.25);border:1px solid rgba(200,164,90,.45)">&larr; Portfolio</a>
+
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">
+    <span>Synthetic NetFlow</span><span>·</span>
+    <span>5 attack archetypes</span><span>·</span>
+    <span>3 detectors, no libraries</span><span>·</span>
+    <span>everything below computes in this tab</span>
+  </div>
+  <h1>The Label Budget</h1>
+  <p class="deck">
+    An Isolation Forest needs <strong>no labels at all</strong>. Gradient boosting and
+    an RBF support vector machine need thousands. So the question nobody puts in the
+    tutorial is: <strong>how many labels do you have to buy before supervision is
+    worth it</strong> — and does it matter <em>which</em> flows you pick?
+  </p>
+  <div class="byline">
+    <b>Isaiah Thompson Ocansey</b><span>·</span>
+    <span>Ph.D. candidate, Data Science</span><span>·</span>
+    <span id="stamp">building the world…</span>
+  </div>
+</header>
+
+<section id="setup">
+  <div class="sec-head"><span class="sec-num">01</span><h2>The setup</h2></div>
+  <dl class="spec" id="spec"></dl>
+  <div class="prose">
+    <p>
+      Every flow carries ten features — duration, bytes each way, packet rate, distinct
+      destination ports, failed logins, SYN error rate, same-host connection rate and how
+      regular the connection intervals are. Two of the attacks are deliberately hard.
+      <span class="mono">Exfiltration</span>
+      hides behind the nightly backup upload; <span class="mono">C2 beacon</span> hides
+      behind service health checks. On every single one of the ten features, their median
+      sits inside the ordinary range of benign traffic. Only the joint pattern gives
+      them away — which is exactly the situation where a labelled example is worth more
+      than a clever unsupervised score.
+    </p>
+  </div>
+</section>
+
+<section id="queue">
+  <div class="sec-head">
+    <span class="sec-num">02</span><h2>The queue</h2>
+    <span class="live-pill" id="livepill">live</span>
+  </div>
+  <div class="prose" style="margin-bottom:20px">
+    <p>
+      One run, in order, at analyst pace. Flows arrive, the ones your strategy
+      picks go to a human, and the two supervised models retrain as the labels
+      land. The Isolation Forest never receives a single one, so its line does
+      not move — watch whether the others reach it, and what it costs when they do.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label" id="qlbl-strat">Who fills the queue</span>
+        <div class="seg" role="group" aria-labelledby="qlbl-strat" id="qseg-strat"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label" id="qlbl-speed">Simulation speed</span>
+        <div class="seg" role="group" aria-labelledby="qlbl-speed" id="qseg-speed"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label">Run</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="qtoggle">Pause</button>
+          <button class="btn" id="qrestart">Restart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="qstats" id="qstats"></div>
+
+    <div class="qmain">
+      <div class="chart-host">
+        <div class="chart-scroll">
+          <svg class="chart" id="qchart" viewBox="0 0 620 340" role="img"
+               aria-label="Average precision against labels bought, updating live"></svg>
+        </div>
+      </div>
+      <div class="qfeed">
+        <div class="qfeed-head">Arriving in the queue</div>
+        <ul id="qlist"></ul>
+      </div>
+    </div>
+
+    <p class="qbanner" id="qbanner"></p>
+  </div>
+</section>
+
+<section id="sweep">
+  <div class="sec-head"><span class="sec-num">03</span><h2>The sweep</h2></div>
+  <div class="prose" style="margin-bottom:20px">
+    <p>
+      The queue above is one run, and one run is noisy — at 1% prevalence a sample of
+      400 flows holds about four attacks, and which four you happened to get moves the
+      score a long way. So the same experiment again, properly: each point trains both
+      models from scratch on a fresh labelled sample and scores them on 6,000 held-out
+      flows, repeated across several seeds. The vertical bars are ±1 standard deviation
+      across those runs — where they are tall, do not trust a single number.
+      The Isolation Forest line is flat because it never gets any labels — that is the
+      bar the other two have to clear.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-strat">Which flows get labelled</span>
+        <div class="seg" role="group" aria-labelledby="lbl-strat" id="seg-strat"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-rate">Attack prevalence</span>
+        <div class="seg" role="group" aria-labelledby="lbl-rate" id="seg-rate"></div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label">New data</span>
+        <button class="btn" id="reroll">Regenerate traffic</button>
+      </div>
+    </div>
+
+    <p class="strategy-note" id="strat-note"></p>
+
+    <div class="chart-host">
+      <div class="chart-scroll">
+        <svg class="chart" id="chart" viewBox="0 0 920 440" role="img"
+             aria-label="Average precision against number of labelled flows, for three detectors"></svg>
+      </div>
+      <div class="tt" id="tt"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="runbar idle" id="runbar">
+      <span class="dot"></span>
+      <span id="runtext">idle</span>
+      <span class="bar-track"><span class="bar-fill" id="barfill"></span></span>
+    </div>
+
+    <div class="scrub">
+      <div class="scrub-head">
+        <span class="ctl-label">Inspect a budget</span>
+        <span class="scrub-val" id="scrub-val"></span>
+      </div>
+      <input type="range" id="scrub" min="0" max="8" step="1" value="5"
+             aria-label="Labelled flows to inspect">
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+</section>
+
+<section id="cost">
+  <div class="sec-head"><span class="sec-num">04</span><h2>What that costs</h2></div>
+  <div class="prose">
+    <p id="cost-line">
+      Triaging one network flow properly — pivot to the packet capture, check the host,
+      check the destination's reputation — takes an analyst about
+      <input class="inline-num" id="minutes" type="number" min="1" max="60" step="1" value="8"
+             aria-label="minutes of analyst time per labelled flow"> minutes.
+      <span id="cost-out"></span>
+    </p>
+    <p class="note" id="cost-note"></p>
+  </div>
+</section>
+
+<section id="blindspot">
+  <div class="sec-head"><span class="sec-num">05</span><h2>The blind spot</h2></div>
+  <div class="prose" style="margin-bottom:20px">
+    <p>
+      Average precision is one number, and one number hides the interesting part.
+      Broken out by archetype — recall inside a false-positive budget of one benign
+      flow in a hundred — the three detectors fail in completely different places.
+    </p>
+  </div>
+  <div class="panel panel-pad">
+    <div style="overflow-x:auto">
+      <table class="arch" id="arch">
+        <thead>
+          <tr>
+            <th>Attack archetype</th>
+            <th>Hides behind</th>
+            <th class="cover">Recall at 1% false-positive rate</th>
+            <th class="num">Share</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="arch-note" style="margin-top:16px"></p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Method, and what this does not show</h2></div>
+  <div class="grid2">
+    <div class="panel panel-pad">
+      <h3>The three detectors</h3>
+      <p class="note" style="margin:0">
+        <b style="color:var(--s-iso)">Isolation Forest</b> — 140 trees, subsample 256,
+        anomaly score from expected path length. Fitted on the unlabelled pool, so
+        contaminated by the attacks inside it, as it would be in production.<br><br>
+        <b style="color:var(--s-gbm)">Gradient boosting</b> — histogram-based, 32 bins,
+        depth 3, 60 rounds, logistic loss, balanced class weights.<br><br>
+        <b style="color:var(--s-svm)">RBF-SVM</b> — the kernel approximated by 192 random
+        Fourier features, then a linear hinge-loss SVM by averaged SGD with the Pegasos
+        norm projection.<br><br>
+        All three are written from scratch in about 500 lines of JavaScript. There is no
+        library on this page and no server call — the numbers you are reading were
+        computed on your machine, seconds ago.
+      </p>
+    </div>
+    <div class="panel panel-pad">
+      <h3>Honest limitations</h3>
+      <p class="note" style="margin:0">
+        The data is synthetic. It is built so that two archetypes are genuinely
+        unresolvable from their benign cover on any single feature — that is checked
+        by an automated test, not asserted — but a generator is still a model of
+        reality, not reality.<br><br>
+        Real NetFlow brings drift, seasonality, correlated flows within a session, and
+        labels that are themselves wrong. All of that pushes in the same direction:
+        it makes the supervised curves worse, not better.<br><br>
+        Average precision is reported on a fixed held-out set drawn from the same
+        distribution. That is the friendliest possible test. A held-out
+        <em>future</em> would be harder.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>The Label Budget · Isaiah Thompson Ocansey</span>
+  <span id="foot-run"></span>
+</footer>
+
+</div>
+
+<script>
+/* ==================================================================== */
+/* ENGINE                                                               */
+/* ==================================================================== */
+/* =====================================================================
+   The Label Budget — engine
+   Synthetic NetFlow generator + Isolation Forest + histogram gradient
+   boosting + RBF-SVM (random Fourier features), written from scratch so
+   the whole experiment runs in a browser tab with no dependencies.
+
+   Isaiah Thompson Ocansey
+   ===================================================================== */
+
+/* ---------------------------------------------------------------- RNG */
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeRng(seed) {
+  const u = mulberry32(seed);
+  let spare = null;
+  return {
+    u,
+    /* Box–Muller, cached spare */
+    n(mu, sd) {
+      if (spare !== null) { const v = spare; spare = null; return mu + sd * v; }
+      let a = 0, b = 0;
+      while (a === 0) a = u();
+      b = u();
+      const r = Math.sqrt(-2 * Math.log(a));
+      spare = r * Math.sin(2 * Math.PI * b);
+      return mu + sd * (r * Math.cos(2 * Math.PI * b));
+    },
+    unif(lo, hi) { return lo + (hi - lo) * u(); },
+    pois(lam) {
+      const L = Math.exp(-lam);
+      let k = 0, p = 1;
+      do { k++; p *= u(); } while (p > L);
+      return k - 1;
+    },
+    pick(weights) {
+      const r = u();
+      let c = 0;
+      for (let i = 0; i < weights.length; i++) { c += weights[i]; if (r < c) return i; }
+      return weights.length - 1;
+    },
+  };
+}
+
+/* -------------------------------------------------------------- SCHEMA */
+
+const FEATURES = [
+  { key: 'dur',    label: 'log duration',        unit: 'log s' },
+  { key: 'src',    label: 'log bytes out',       unit: 'log B' },
+  { key: 'dst',    label: 'log bytes in',        unit: 'log B' },
+  { key: 'ratio',  label: 'out/in byte ratio',   unit: 'log' },
+  { key: 'pkt',    label: 'log packet rate',     unit: 'log pps' },
+  { key: 'ports',  label: 'distinct dst ports',  unit: 'count' },
+  { key: 'fail',   label: 'failed logins',       unit: 'count' },
+  { key: 'syn',    label: 'SYN error rate',      unit: '0–1' },
+  { key: 'host',   label: 'log same-host rate',  unit: 'log/min' },
+  { key: 'reg',    label: 'interval regularity', unit: '0–1' },
+];
+const F = FEATURES.length;
+
+/* Benign service profiles. Two of them — bulk upload and health-check —
+   exist specifically so that the two stealthy attacks have a legitimate
+   neighbour to hide behind. Without them every attack is trivially
+   outlying and the whole experiment is rigged. */
+const BENIGN = [
+  { name: 'web browsing',   w: 0.34 },
+  { name: 'DNS lookup',     w: 0.21 },
+  { name: 'SSH session',    w: 0.12 },
+  { name: 'bulk download',  w: 0.11 },
+  { name: 'backup upload',  w: 0.10 },
+  { name: 'health check',   w: 0.12 },
+];
+
+const ATTACKS = [
+  { name: 'Port scan',    w: 0.26, short: 'scan'   },
+  { name: 'SYN flood',    w: 0.21, short: 'flood'  },
+  { name: 'Brute force',  w: 0.20, short: 'brute'  },
+  { name: 'Exfiltration', w: 0.18, short: 'exfil'  },
+  { name: 'C2 beacon',    w: 0.15, short: 'beacon' },
+];
+
+function sampleBenign(r, k, out, o) {
+  let dur, src, dst, pkt, ports, fail, syn, host, reg;
+  switch (k) {
+    case 0: /* web */
+      dur = r.n(0.5, 0.7); src = r.n(6.6, 0.7); dst = r.n(9.6, 1.1);
+      pkt = r.n(2.5, 0.5); ports = Math.max(1, Math.round(r.n(2.4, 1.4)));
+      fail = 0; syn = Math.abs(r.n(0.02, 0.02)); host = r.n(1.2, 0.5);
+      reg = r.unif(0.04, 0.34); break;
+    case 1: /* dns */
+      dur = r.n(-2.5, 0.5); src = r.n(4.2, 0.4); dst = r.n(5.0, 0.5);
+      pkt = r.n(1.0, 0.3); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.01, 0.01)); host = r.n(2.5, 0.6);
+      reg = r.unif(0.08, 0.46); break;
+    case 2: /* ssh */
+      dur = r.n(6.0, 1.0); src = r.n(8.0, 0.8); dst = r.n(8.4, 0.9);
+      pkt = r.n(0.5, 0.4); ports = 1; fail = r.pois(0.35);
+      syn = Math.abs(r.n(0.01, 0.01)); host = r.n(0.3, 0.35);
+      reg = r.unif(0.04, 0.30); break;
+    case 3: /* bulk download */
+      dur = r.n(4.5, 0.9); src = r.n(7.0, 0.8); dst = r.n(15.5, 1.0);
+      pkt = r.n(4.0, 0.5); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.006, 0.006)); host = r.n(0.5, 0.4);
+      reg = r.unif(0.04, 0.26); break;
+    case 4: /* backup upload — the cover for exfiltration */
+      dur = r.n(5.0, 1.0); src = r.n(14.8, 1.2); dst = r.n(6.0, 0.8);
+      pkt = r.n(3.9, 0.6); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.006, 0.006)); host = r.n(0.4, 0.3);
+      reg = r.unif(0.04, 0.32); break;
+    default: /* health check — the cover for C2 beaconing */
+      dur = r.n(-1.0, 0.45); src = r.n(5.8, 0.45); dst = r.n(6.0, 0.5);
+      pkt = r.n(1.5, 0.35); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.01, 0.01)); host = r.n(2.0, 0.5);
+      reg = r.unif(0.84, 0.99); break;
+  }
+  write(out, o, dur, src, dst, pkt, ports, fail, syn, host, reg);
+}
+
+function sampleAttack(r, k, out, o) {
+  let dur, src, dst, pkt, ports, fail, syn, host, reg;
+  switch (k) {
+    case 0: /* port scan — screams on two axes at once */
+      dur = r.n(-3.0, 0.45); src = r.n(3.5, 0.35); dst = r.n(2.0, 0.6);
+      pkt = r.n(3.5, 0.6); ports = Math.max(6, Math.round(r.n(180, 65)));
+      fail = 0; syn = Math.min(1, Math.abs(r.n(0.85, 0.09)));
+      host = r.n(5.0, 0.6); reg = r.unif(0.45, 0.9); break;
+    case 1: /* SYN flood — extreme packet + host rate */
+      dur = r.n(-3.5, 0.35); src = r.n(3.0, 0.3); dst = r.n(1.0, 0.5);
+      pkt = r.n(7.5, 0.6); ports = Math.max(1, Math.round(r.n(1.5, 0.8)));
+      fail = 0; syn = Math.min(1, Math.abs(r.n(0.95, 0.05)));
+      host = r.n(7.5, 0.5); reg = r.unif(0.7, 0.97); break;
+    case 2: /* brute force — 40% of it is deliberately low-and-slow */
+      {
+        const loud = r.u() < 0.6;
+        dur = r.n(loud ? 2.6 : 5.4, 0.8);
+        src = r.n(7.5, 0.6); dst = r.n(7.8, 0.6);
+        pkt = r.n(loud ? 1.9 : 0.4, 0.4); ports = 1;
+        fail = Math.max(1, Math.round(r.n(loud ? 26 : 4.2, loud ? 10 : 1.8)));
+        syn = Math.abs(r.n(0.05, 0.04)); host = r.n(loud ? 2.2 : 0.6, 0.5);
+        reg = r.unif(loud ? 0.5 : 0.25, loud ? 0.9 : 0.6);
+      }
+      break;
+    case 3: /* exfiltration — every margin sits inside "backup upload" */
+      dur = r.n(3.2, 0.75); src = r.n(14.5, 1.1); dst = r.n(6.2, 0.8);
+      pkt = r.n(4.6, 0.5); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.008, 0.007)); host = r.n(1.6, 0.5);
+      reg = r.unif(0.28, 0.62); break;
+    default: /* C2 beacon — every margin sits inside "health check" */
+      dur = r.n(-0.55, 0.45); src = r.n(6.25, 0.45); dst = r.n(6.7, 0.5);
+      pkt = r.n(1.75, 0.35); ports = 1; fail = 0;
+      syn = Math.abs(r.n(0.015, 0.012)); host = r.n(1.45, 0.4);
+      reg = r.unif(0.88, 0.995); break;
+  }
+  write(out, o, dur, src, dst, pkt, ports, fail, syn, host, reg);
+}
+
+function write(out, o, dur, src, dst, pkt, ports, fail, syn, host, reg) {
+  out[o + 0] = dur;
+  out[o + 1] = src;
+  out[o + 2] = dst;
+  out[o + 3] = src - dst;
+  out[o + 4] = pkt;
+  out[o + 5] = ports;
+  out[o + 6] = fail;
+  out[o + 7] = Math.min(1, syn);
+  out[o + 8] = host;
+  out[o + 9] = Math.min(1, Math.max(0, reg));
+}
+
+/**
+ * @param {number} n      rows
+ * @param {number} rate   attack prevalence, e.g. 0.01
+ * @param {number} seed
+ * @returns {{X:Float64Array, y:Uint8Array, kind:Int8Array, n:number}}
+ *          kind >= 0 indexes ATTACKS; kind < 0 encodes the benign profile as
+ *          -(index + 1), so -1 is BENIGN[0]. Every consumer that reads kind as
+ *          an attack type already guards on y === 1.
+ */
+function generate(n, rate, seed) {
+  const r = makeRng(seed);
+  const X = new Float64Array(n * F);
+  const y = new Uint8Array(n);
+  const kind = new Int8Array(n);
+  const bw = BENIGN.map((b) => b.w);
+  const aw = ATTACKS.map((a) => a.w);
+  for (let i = 0; i < n; i++) {
+    const o = i * F;
+    if (r.u() < rate) {
+      const k = r.pick(aw);
+      sampleAttack(r, k, X, o);
+      y[i] = 1; kind[i] = k;
+    } else {
+      const k = r.pick(bw);
+      sampleBenign(r, k, X, o);
+      y[i] = 0; kind[i] = -(k + 1);
+    }
+  }
+  return { X, y, kind, n };
+}
+
+/* ---------------------------------------------------- ISOLATION FOREST */
+
+const C_FACTOR = (n) =>
+  n <= 1 ? 0 : 2 * (Math.log(n - 1) + 0.5772156649) - (2 * (n - 1)) / n;
+
+/**
+ * Trees are stored flat: for node j, feat[j] (-1 = leaf), split[j],
+ * left[j], right[j], leafDepthAdj[j].
+ */
+function iforestFit(X, n, { trees = 140, sub = 256, seed = 7 } = {}) {
+  const r = makeRng(seed);
+  const limit = Math.ceil(Math.log2(Math.max(2, sub)));
+  const forest = [];
+  const idx = new Int32Array(sub);
+
+  for (let t = 0; t < trees; t++) {
+    for (let i = 0; i < sub; i++) idx[i] = (r.u() * n) | 0;
+    const feat = [], split = [], left = [], right = [], adj = [];
+
+    const build = (lo, hi, order, depth) => {
+      const id = feat.length;
+      feat.push(-1); split.push(0); left.push(-1); right.push(-1); adj.push(0);
+      const m = hi - lo;
+      if (depth >= limit || m <= 1) { adj[id] = C_FACTOR(m) + depth; return id; }
+
+      /* pick a feature that actually varies in this slice */
+      let f = -1, mn = 0, mx = 0;
+      for (let tries = 0; tries < 8; tries++) {
+        const cand = (r.u() * F) | 0;
+        let a = Infinity, b = -Infinity;
+        for (let i = lo; i < hi; i++) {
+          const v = X[order[i] * F + cand];
+          if (v < a) a = v;
+          if (v > b) b = v;
+        }
+        if (b > a) { f = cand; mn = a; mx = b; break; }
+      }
+      if (f < 0) { adj[id] = C_FACTOR(m) + depth; return id; }
+
+      const s = mn + (mx - mn) * r.u();
+      /* in-place partition */
+      let p = lo;
+      for (let i = lo; i < hi; i++) {
+        if (X[order[i] * F + f] < s) {
+          const tmp = order[i]; order[i] = order[p]; order[p] = tmp; p++;
+        }
+      }
+      if (p === lo || p === hi) { adj[id] = C_FACTOR(m) + depth; return id; }
+
+      feat[id] = f; split[id] = s;
+      left[id] = build(lo, p, order, depth + 1);
+      right[id] = build(p, hi, order, depth + 1);
+      return id;
+    };
+
+    build(0, sub, Int32Array.from(idx), 0);
+    forest.push({
+      feat: Int8Array.from(feat), split: Float64Array.from(split),
+      left: Int32Array.from(left), right: Int32Array.from(right),
+      adj: Float64Array.from(adj),
+    });
+  }
+  return { forest, c: C_FACTOR(sub) };
+}
+
+function iforestScore(model, X, n) {
+  const { forest, c } = model;
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const o = i * F;
+    let sum = 0;
+    for (let t = 0; t < forest.length; t++) {
+      const tr = forest[t];
+      let j = 0;
+      while (tr.feat[j] >= 0) j = X[o + tr.feat[j]] < tr.split[j] ? tr.left[j] : tr.right[j];
+      sum += tr.adj[j];
+    }
+    out[i] = Math.pow(2, -(sum / forest.length) / c);
+  }
+  return out;
+}
+
+/* --------------------------------------------- HISTOGRAM GRADIENT BOOST */
+
+/** Quantile bin edges computed once over the pool, reused for every subset. */
+function fitBinner(X, n, bins = 32) {
+  const edges = [];
+  const col = new Float64Array(Math.min(n, 8000));
+  const stride = Math.max(1, Math.floor(n / col.length));
+  for (let f = 0; f < F; f++) {
+    let m = 0;
+    for (let i = 0; i < n && m < col.length; i += stride) col[m++] = X[i * F + f];
+    const s = Array.from(col.subarray(0, m)).sort((a, b) => a - b);
+    const e = [];
+    for (let b = 1; b < bins; b++) {
+      const v = s[Math.min(s.length - 1, Math.floor((b / bins) * s.length))];
+      if (e.length === 0 || v > e[e.length - 1]) e.push(v);
+    }
+    edges.push(Float64Array.from(e));
+  }
+  return { edges, bins };
+}
+
+function binAll(binner, X, n) {
+  const B = new Uint8Array(n * F);
+  for (let f = 0; f < F; f++) {
+    const e = binner.edges[f], L = e.length;
+    for (let i = 0; i < n; i++) {
+      const v = X[i * F + f];
+      let lo = 0, hi = L;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (v < e[mid]) hi = mid; else lo = mid + 1; }
+      B[i * F + f] = lo;
+    }
+  }
+  return B;
+}
+
+const sigmoid = (z) => 1 / (1 + Math.exp(-z));
+
+/**
+ * Trains on a subset of a pre-binned matrix.
+ * @param {Uint8Array} B    pre-binned pool
+ * @param {Uint8Array} y    labels for the pool
+ * @param {Int32Array} rows subset indices into the pool
+ */
+function gbmFit(B, y, rows, nBins, opts = {}) {
+  const { rounds = 60, depth = 3, lr = 0.12, lambda = 1.0, minChild = 2.0 } = opts;
+  const m = rows.length;
+  let npos = 0;
+  for (let i = 0; i < m; i++) npos += y[rows[i]];
+  if (npos === 0 || npos === m) return null;
+
+  /* class weight — without it, rare-positive ranking is badly degraded */
+  const wPos = (m - npos) / npos;
+  const w = new Float64Array(m);
+  for (let i = 0; i < m; i++) w[i] = y[rows[i]] ? wPos : 1;
+
+  let sw = 0, swy = 0;
+  for (let i = 0; i < m; i++) { sw += w[i]; swy += w[i] * y[rows[i]]; }
+  const p0 = Math.min(1 - 1e-6, Math.max(1e-6, swy / sw));
+  const base = Math.log(p0 / (1 - p0));
+
+  const Fv = new Float64Array(m).fill(base);
+  const g = new Float64Array(m), h = new Float64Array(m);
+  const trees = [];
+  const order = new Int32Array(m);
+  const GH = new Float64Array(nBins * 2);
+
+  for (let t = 0; t < rounds; t++) {
+    for (let i = 0; i < m; i++) {
+      const p = sigmoid(Fv[i]);
+      g[i] = w[i] * (p - y[rows[i]]);
+      h[i] = w[i] * Math.max(1e-9, p * (1 - p));
+    }
+    for (let i = 0; i < m; i++) order[i] = i;
+
+    const feat = [], bin = [], left = [], right = [], val = [];
+
+    const build = (lo, hi, d) => {
+      const id = feat.length;
+      feat.push(-1); bin.push(0); left.push(-1); right.push(-1); val.push(0);
+      let G = 0, H = 0;
+      for (let i = lo; i < hi; i++) { G += g[order[i]]; H += h[order[i]]; }
+
+      if (d >= depth || hi - lo < 4 || H < 2 * minChild) {
+        val[id] = -G / (H + lambda); return id;
+      }
+      const parent = (G * G) / (H + lambda);
+      let bestGain = 1e-9, bestF = -1, bestB = 0;
+
+      for (let f = 0; f < F; f++) {
+        GH.fill(0);
+        for (let i = lo; i < hi; i++) {
+          const r0 = order[i], b = B[rows[r0] * F + f];
+          GH[b * 2] += g[r0]; GH[b * 2 + 1] += h[r0];
+        }
+        let gl = 0, hl = 0;
+        for (let b = 0; b < nBins - 1; b++) {
+          gl += GH[b * 2]; hl += GH[b * 2 + 1];
+          if (hl < minChild) continue;
+          const hr = H - hl;
+          if (hr < minChild) break;
+          const gain = (gl * gl) / (hl + lambda) + ((G - gl) * (G - gl)) / (hr + lambda) - parent;
+          if (gain > bestGain) { bestGain = gain; bestF = f; bestB = b; }
+        }
+      }
+      if (bestF < 0) { val[id] = -G / (H + lambda); return id; }
+
+      let p = lo;
+      for (let i = lo; i < hi; i++) {
+        if (B[rows[order[i]] * F + bestF] <= bestB) {
+          const tmp = order[i]; order[i] = order[p]; order[p] = tmp; p++;
+        }
+      }
+      if (p === lo || p === hi) { val[id] = -G / (H + lambda); return id; }
+      feat[id] = bestF; bin[id] = bestB;
+      left[id] = build(lo, p, d + 1);
+      right[id] = build(p, hi, d + 1);
+      return id;
+    };
+
+    build(0, m, 0);
+    const tree = {
+      feat: Int8Array.from(feat), bin: Uint8Array.from(bin),
+      left: Int32Array.from(left), right: Int32Array.from(right),
+      val: Float64Array.from(val),
+    };
+    trees.push(tree);
+    for (let i = 0; i < m; i++) {
+      let j = 0;
+      const off = rows[i] * F;
+      while (tree.feat[j] >= 0) j = B[off + tree.feat[j]] <= tree.bin[j] ? tree.left[j] : tree.right[j];
+      Fv[i] += lr * tree.val[j];
+    }
+  }
+  return { trees, base, lr };
+}
+
+function gbmScore(model, B, n) {
+  const out = new Float64Array(n);
+  if (!model) return out;
+  const { trees, base, lr } = model;
+  for (let i = 0; i < n; i++) {
+    const off = i * F;
+    let s = base;
+    for (let t = 0; t < trees.length; t++) {
+      const tr = trees[t];
+      let j = 0;
+      while (tr.feat[j] >= 0) j = B[off + tr.feat[j]] <= tr.bin[j] ? tr.left[j] : tr.right[j];
+      s += lr * tr.val[j];
+    }
+    out[i] = s;
+  }
+  return out;
+}
+
+/* ------------------------------------------- RBF SVM via Fourier features */
+
+function fitScaler(X, n) {
+  const mu = new Float64Array(F), sd = new Float64Array(F);
+  for (let f = 0; f < F; f++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += X[i * F + f];
+    mu[f] = s / n;
+    let v = 0;
+    for (let i = 0; i < n; i++) { const d = X[i * F + f] - mu[f]; v += d * d; }
+    sd[f] = Math.sqrt(v / n) || 1;
+  }
+  return { mu, sd };
+}
+
+/** z(x) = sqrt(2/D) cos(Wx + b), W ~ N(0, 2γ) — approximates exp(-γ‖x-y‖²). */
+function makeRff(scaler, D, gamma, seed) {
+  const r = makeRng(seed);
+  const W = new Float64Array(D * F), b = new Float64Array(D);
+  const s = Math.sqrt(2 * gamma);
+  for (let d = 0; d < D; d++) {
+    for (let f = 0; f < F; f++) W[d * F + f] = r.n(0, s);
+    b[d] = r.unif(0, 2 * Math.PI);
+  }
+  return { W, b, D, scaler, scale: Math.sqrt(2 / D) };
+}
+
+function rffTransform(rff, X, n) {
+  const { W, b, D, scaler, scale } = rff;
+  const Z = new Float64Array(n * D);
+  const xs = new Float64Array(F);
+  for (let i = 0; i < n; i++) {
+    for (let f = 0; f < F; f++) xs[f] = (X[i * F + f] - scaler.mu[f]) / scaler.sd[f];
+    for (let d = 0; d < D; d++) {
+      let acc = b[d];
+      const o = d * F;
+      for (let f = 0; f < F; f++) acc += W[o + f] * xs[f];
+      Z[i * D + d] = scale * Math.cos(acc);
+    }
+  }
+  return Z;
+}
+
+/**
+ * Linear SVM on the Fourier features: L2-regularised hinge loss by averaged
+ * SGD with a decaying step size, balanced class weights, and the Pegasos
+ * norm projection. The projection matters here — with positives at 1% the
+ * class weight is large, and unprojected SGD diverges on some seeds.
+ */
+function svmFit(Z, D, y, rows, opts = {}) {
+  const { epochs = 26, lambda = 1e-3, eta0 = 0.05, seed = 3 } = opts;
+  const m = rows.length;
+  let npos = 0;
+  for (let i = 0; i < m; i++) npos += y[rows[i]];
+  if (npos === 0 || npos === m) return null;
+
+  /* balanced weights, mean 1 — keeps the effective step size sane */
+  const wPos = m / (2 * npos), wNeg = m / (2 * (m - npos));
+
+  const r = makeRng(seed);
+  const w = new Float64Array(D);
+  const avg = new Float64Array(D);
+  const radius = 1 / Math.sqrt(lambda);
+  const t0 = 1 / (lambda * eta0);
+  let bias = 0, avgB = 0, avgN = 0, tstep = 0;
+  const perm = new Int32Array(m);
+  for (let i = 0; i < m; i++) perm[i] = i;
+  const avgFrom = Math.max(1, Math.floor(epochs * 0.5));
+
+  for (let e = 0; e < epochs; e++) {
+    for (let i = m - 1; i > 0; i--) {
+      const j = (r.u() * (i + 1)) | 0;
+      const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+    }
+    for (let k = 0; k < m; k++) {
+      const i = perm[k], row = rows[i];
+      const pos = y[row] === 1;
+      const yi = pos ? 1 : -1;
+      const cw = pos ? wPos : wNeg;
+      const eta = 1 / (lambda * (t0 + tstep)); tstep++;
+      const off = row * D;   /* index by POOL row, not position in the subset */
+      let dot = bias;
+      for (let d = 0; d < D; d++) dot += w[d] * Z[off + d];
+      const shrink = 1 - eta * lambda;
+      for (let d = 0; d < D; d++) w[d] *= shrink;
+      bias *= shrink;
+      if (yi * dot < 1) {
+        const c = eta * cw * yi;
+        for (let d = 0; d < D; d++) w[d] += c * Z[off + d];
+        bias += c;
+      }
+      /* Pegasos projection onto the ball of radius 1/sqrt(lambda) */
+      let nn = 0;
+      for (let d = 0; d < D; d++) nn += w[d] * w[d];
+      if (nn > radius * radius) {
+        const s = radius / Math.sqrt(nn);
+        for (let d = 0; d < D; d++) w[d] *= s;
+        bias *= s;
+      }
+    }
+    if (e >= avgFrom) {
+      for (let d = 0; d < D; d++) avg[d] += w[d];
+      avgB += bias; avgN++;
+    }
+  }
+  for (let d = 0; d < D; d++) avg[d] /= avgN;
+  return { w: avg, bias: avgB / avgN, D };
+}
+
+function svmScore(model, Z, n) {
+  const out = new Float64Array(n);
+  if (!model) return out;
+  const { w, bias, D } = model;
+  for (let i = 0; i < n; i++) {
+    const o = i * D;
+    let s = bias;
+    for (let d = 0; d < D; d++) s += w[d] * Z[o + d];
+    out[i] = s;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------- METRICS */
+
+function rankOrder(scores, n) {
+  const idx = new Int32Array(n);
+  for (let i = 0; i < n; i++) idx[i] = i;
+  const arr = Array.from(idx).sort((a, b) => scores[b] - scores[a]);
+  return Int32Array.from(arr);
+}
+
+/** Average precision — the area under the precision/recall curve. */
+function averagePrecision(scores, y, n, ord) {
+  const order = ord || rankOrder(scores, n);
+  let P = 0;
+  for (let i = 0; i < n; i++) P += y[i];
+  if (P === 0) return 0;
+  let tp = 0, ap = 0;
+  for (let k = 0; k < n; k++) {
+    if (y[order[k]]) { tp++; ap += tp / (k + 1); }
+  }
+  return ap / P;
+}
+
+function rocAuc(scores, y, n, ord) {
+  const order = ord || rankOrder(scores, n);
+  let P = 0;
+  for (let i = 0; i < n; i++) P += y[i];
+  const N = n - P;
+  if (P === 0 || N === 0) return 0.5;
+  let tp = 0, fp = 0, area = 0, prevFp = 0;
+  for (let k = 0; k < n; k++) {
+    if (y[order[k]]) tp++; else { fp++; area += tp * (fp - prevFp); prevFp = fp; }
+  }
+  return area / (P * N);
+}
+
+/** Recall achievable while holding the benign false-positive rate at `fpr`. */
+function recallAtFpr(scores, y, n, fpr, ord) {
+  const order = ord || rankOrder(scores, n);
+  let P = 0;
+  for (let i = 0; i < n; i++) P += y[i];
+  const N = n - P;
+  if (P === 0 || N === 0) return 0;
+  const budget = Math.max(1, Math.floor(fpr * N));
+  let tp = 0, fp = 0;
+  for (let k = 0; k < n; k++) {
+    if (y[order[k]]) tp++;
+    else { fp++; if (fp > budget) break; }
+  }
+  return tp / P;
+}
+
+/** Per-archetype recall inside the same false-positive budget. */
+function recallByKind(scores, y, kind, n, fpr, nKinds, ord) {
+  const order = ord || rankOrder(scores, n);
+  let P = 0;
+  for (let i = 0; i < n; i++) P += y[i];
+  const N = n - P;
+  const tot = new Int32Array(nKinds), hit = new Int32Array(nKinds);
+  for (let i = 0; i < n; i++) if (y[i]) tot[kind[i]]++;
+  const budget = Math.max(1, Math.floor(fpr * N));
+  let fp = 0;
+  for (let k = 0; k < n; k++) {
+    const i = order[k];
+    if (y[i]) hit[kind[i]]++;
+    else { fp++; if (fp > budget) break; }
+  }
+  const out = [];
+  for (let c = 0; c < nKinds; c++) out.push(tot[c] ? hit[c] / tot[c] : 0);
+  return out;
+}
+
+/* ------------------------------------------------------------- EXPORTS */
+
+/** Human-readable name for a row, from its kind code. */
+function kindName(kind) {
+  return kind >= 0 ? ATTACKS[kind].name : BENIGN[-kind - 1].name;
+}
+
+const ENGINE = {
+  FEATURES, F, BENIGN, ATTACKS, kindName,
+  makeRng, generate,
+  iforestFit, iforestScore,
+  fitBinner, binAll, gbmFit, gbmScore,
+  fitScaler, makeRff, rffTransform, svmFit, svmScore,
+  rankOrder, averagePrecision, rocAuc, recallAtFpr, recallByKind,
+};
+
+
+/* ==================================================================== */
+/* SWEEP                                                                */
+/* ==================================================================== */
+/* =====================================================================
+   The Label Budget — experiment driver
+   Builds the world once, then answers: for a given labelling strategy and
+   budget, how well can each of the three detectors rank attacks?
+   ===================================================================== */
+
+
+const E = ENGINE;
+
+const BUDGETS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400];
+const FPR = 0.01;          /* analyst tolerance: 1 benign flow in 100 */
+const POOL_N = 24000;      /* unlabelled telemetry available to label from */
+const TEST_N = 6000;
+
+const STRATEGIES = {
+  random: {
+    name: 'Random audit',
+    blurb: 'Pull flows uniformly at random and have an analyst label them.',
+  },
+  rule: {
+    name: 'Signature alerts',
+    blurb: 'Label whatever the existing detection rules fired on. Free to collect — and hard-capped at the number of alerts the rules actually produce.',
+  },
+  guided: {
+    name: 'Isolation-Forest guided',
+    blurb: 'Label the flows the unsupervised model ranks as most anomalous, plus a 40% random audit so the model still sees normal traffic.',
+  },
+};
+
+/**
+ * The signature set every SOC already runs: loud protocol abuse. Deliberately
+ * imperfect in the way real rule sets are — it fires on roughly 2.6% of
+ * traffic at about 25% precision, catches every scan and flood, and has never
+ * once seen a beaconing implant.
+ */
+function isAlert(X, i) {
+  const o = i * E.F;
+  return X[o + 7] > 0.35 || X[o + 5] > 15 || X[o + 4] > 5.0 ||
+         X[o + 8] > 3.4 || X[o + 6] >= 8;
+}
+
+/**
+ * Build the fixed world: pool, test set, iForest fitted on the unlabelled
+ * pool, binned matrices and RFF projections. Everything a sweep reuses.
+ */
+function buildWorld(rate, seed, onProgress) {
+  const step = (s) => { if (onProgress) onProgress(s); };
+
+  step('Synthesising telemetry');
+  const pool = E.generate(POOL_N, rate, seed);
+  const test = E.generate(TEST_N, rate, seed + 977);
+
+  step('Fitting Isolation Forest on unlabelled traffic');
+  const iso = E.iforestFit(pool.X, pool.n, { trees: 140, sub: 256, seed: seed + 13 });
+  const isoPool = E.iforestScore(iso, pool.X, pool.n);
+  const isoTest = E.iforestScore(iso, test.X, test.n);
+
+  step('Binning features');
+  const binner = E.fitBinner(pool.X, pool.n, 32);
+  const Bpool = E.binAll(binner, pool.X, pool.n);
+  const Btest = E.binAll(binner, test.X, test.n);
+
+  step('Projecting Fourier features');
+  const scaler = E.fitScaler(pool.X, pool.n);
+  const D = 192;
+  const rff = E.makeRff(scaler, D, 1 / E.F, seed + 41);
+  const Zpool = E.rffTransform(rff, pool.X, pool.n);
+  const Ztest = E.rffTransform(rff, test.X, test.n);
+
+  /* candidate orderings, precomputed once per world */
+  const byIso = Array.from(isoPool.keys()).sort((a, b) => isoPool[b] - isoPool[a]);
+  const alerts = [];
+  for (let i = 0; i < pool.n; i++) if (isAlert(pool.X, i)) alerts.push(i);
+  let alertPos = 0;
+  for (const i of alerts) alertPos += pool.y[i];
+
+  const isoOrd = E.rankOrder(isoTest, test.n);
+  const isoMetrics = {
+    ap: E.averagePrecision(isoTest, test.y, test.n, isoOrd),
+    auc: E.rocAuc(isoTest, test.y, test.n, isoOrd),
+    rec: E.recallAtFpr(isoTest, test.y, test.n, FPR, isoOrd),
+    byKind: E.recallByKind(isoTest, test.y, test.kind, test.n, FPR, E.ATTACKS.length, isoOrd),
+  };
+
+  let poolPos = 0;
+  for (let i = 0; i < pool.n; i++) poolPos += pool.y[i];
+
+  return {
+    rate, seed, pool, test, D, Bpool, Btest, Zpool, Ztest,
+    isoTest, isoMetrics, byIso, alerts, alertPos, poolPos,
+    baseline: test.y.reduce((a, b) => a + b, 0) / test.n,
+  };
+}
+
+let GUIDED_TOP = 0.6;   /* rest is random audit, so the model still sees normal */
+function setGuidedTop(v) { GUIDED_TOP = v; }
+
+/**
+ * Choose which pool rows get labelled under a given strategy.
+ * Returns {rows, capped} — `capped` is true when the strategy physically
+ * cannot supply the requested budget, which is the whole point of the
+ * signature-alert curve.
+ */
+function selectRows(world, strategy, budget, seed) {
+  const n = world.pool.n;
+  const r = E.makeRng(seed);
+  const shuffled = (arr) => {
+    const a = Int32Array.from(arr);
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (r.u() * (i + 1)) | 0;
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  };
+
+  if (strategy === 'random') {
+    const perm = shuffled(Int32Array.from({ length: n }, (_, i) => i));
+    return { rows: perm.subarray(0, Math.min(budget, n)), capped: budget > n };
+  }
+
+  if (strategy === 'rule') {
+    const a = shuffled(world.alerts);
+    return {
+      rows: a.subarray(0, Math.min(budget, a.length)),
+      capped: budget > a.length,
+    };
+  }
+
+  /* guided: top of the anomaly ranking, topped up with a random audit */
+  const take = Math.min(budget, n);
+  const nTop = Math.floor(take * GUIDED_TOP);
+  const chosen = new Set(world.byIso.slice(0, nTop));
+  while (chosen.size < take) chosen.add((r.u() * n) | 0);
+  return { rows: Int32Array.from(chosen), capped: false };
+}
+
+/** Train both supervised models on one labelled subset and score the test set. */
+function evalBudget(world, strategy, budget, seed) {
+  const { rows, capped } = selectRows(world, strategy, budget, seed);
+  let pos = 0;
+  for (let i = 0; i < rows.length; i++) pos += world.pool.y[rows[i]];
+
+  const out = { budget, strategy, labelled: rows.length, positives: pos, capped };
+  const t = world.test;
+
+  const gbm = E.gbmFit(world.Bpool, world.pool.y, rows, 32,
+    { rounds: 60, depth: 3, lr: 0.12 });
+  const svm = E.svmFit(world.Zpool, world.D, world.pool.y, rows,
+    { epochs: 32, seed: seed + 5 });
+
+  for (const [key, model, scoreFn, mat] of [
+    ['gbm', gbm, E.gbmScore, world.Btest],
+    ['svm', svm, E.svmScore, world.Ztest],
+  ]) {
+    if (!model) { out[key] = null; continue; }
+    const s = scoreFn(model, mat, t.n);
+    const ord = E.rankOrder(s, t.n);
+    out[key] = {
+      ap: E.averagePrecision(s, t.y, t.n, ord),
+      auc: E.rocAuc(s, t.y, t.n, ord),
+      rec: E.recallAtFpr(s, t.y, t.n, FPR, ord),
+      byKind: E.recallByKind(s, t.y, t.kind, t.n, FPR, E.ATTACKS.length, ord),
+    };
+  }
+  return out;
+}
+
+/** More repeats where the variance is worst — small budgets are cheap to run. */
+const repsFor = (budget) => (budget <= 400 ? 15 : budget <= 1600 ? 8 : 5);
+
+/**
+ * Average several seeds at one budget.
+ *
+ * A run where the labelled sample contained no attacks at all cannot produce
+ * a model. Dropping those runs would quietly report the score of the lucky
+ * seeds only, so instead they score as a random ranker — average precision
+ * equal to the base rate — which is exactly what you get in production when
+ * there is no model to deploy. The failure count is reported alongside.
+ */
+function evalBudgetAveraged(world, strategy, budget, repsOverride) {
+  const reps = repsOverride || repsFor(budget);
+  const acc = { gbm: [], svm: [] };
+  const dead = { gbm: 0, svm: 0 };
+  let posSum = 0, labSum = 0, capped = false;
+
+  const nullRun = {
+    ap: world.baseline, auc: 0.5, rec: FPR,
+    byKind: E.ATTACKS.map(() => FPR),
+  };
+
+  for (let s = 0; s < reps; s++) {
+    const r = evalBudget(world, strategy, budget, 1000 + s * 131 + budget);
+    posSum += r.positives;
+    labSum += r.labelled;
+    capped = capped || r.capped;
+    for (const k of ['gbm', 'svm']) {
+      if (r[k]) acc[k].push(r[k]);
+      else { acc[k].push(nullRun); dead[k]++; }
+    }
+  }
+
+  const summarise = (k) => {
+    const a = acc[k];
+    const aps = a.map((x) => x.ap);
+    const mu = aps.reduce((s, x) => s + x, 0) / aps.length;
+    const sd = Math.sqrt(aps.reduce((s, x) => s + (x - mu) * (x - mu), 0) / aps.length);
+    return {
+      ap: mu,
+      apLo: Math.max(0, mu - sd),
+      apHi: Math.min(1, mu + sd),
+      auc: a.reduce((s, x) => s + x.auc, 0) / a.length,
+      rec: a.reduce((s, x) => s + x.rec, 0) / a.length,
+      byKind: E.ATTACKS.map((_, c) => a.reduce((s, x) => s + x.byKind[c], 0) / a.length),
+      runs: a.length,
+      failed: dead[k],
+    };
+  };
+
+  return {
+    budget, strategy, capped, reps,
+    labelled: labSum / reps,
+    positives: posSum / reps,
+    gbm: summarise('gbm'), svm: summarise('svm'),
+  };
+}
+
+
+/* ===================================================================== */
+/* THE QUEUE — the same experiment, run once, in order, as it happens.   */
+/* ===================================================================== */
+
+const QUEUE_CAP = 3200;
+
+/**
+ * The order in which flows reach the analyst under a given strategy.
+ *
+ * This is the streaming counterpart of selectRows: same policies, but the
+ * result is a sequence rather than a set, because an analyst works through a
+ * queue one flow at a time. The signature-alert queue is finite on purpose —
+ * when it runs out, it runs out.
+ */
+function queueOrder(world, strategy, seed, cap) {
+  const n = world.pool.n;
+  const r = E.makeRng(seed);
+  const take = Math.min(cap || QUEUE_CAP, n);
+
+  const shuffled = (arr) => {
+    const a = Int32Array.from(arr);
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (r.u() * (i + 1)) | 0;
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  };
+
+  if (strategy === 'random') {
+    return shuffled(Int32Array.from({ length: n }, (_, i) => i)).subarray(0, take);
+  }
+  if (strategy === 'rule') {
+    const a = shuffled(world.alerts);
+    return a.subarray(0, Math.min(take, a.length));
+  }
+
+  /* guided: mostly the anomaly ranking, interleaved with a random audit so the
+     analyst keeps seeing ordinary traffic and the model keeps learning it */
+  const rnd = shuffled(Int32Array.from({ length: n }, (_, i) => i));
+  const used = new Uint8Array(n);
+  const out = new Int32Array(take);
+  let ip = 0, rp = 0;
+  for (let k = 0; k < take; k++) {
+    const fromIso = r.u() < GUIDED_TOP;
+    let pick = -1;
+    if (fromIso) {
+      while (ip < world.byIso.length && used[world.byIso[ip]]) ip++;
+      if (ip < world.byIso.length) pick = world.byIso[ip++];
+    }
+    if (pick < 0) {
+      while (rp < n && used[rnd[rp]]) rp++;
+      if (rp >= n) return out.subarray(0, k);
+      pick = rnd[rp++];
+    }
+    used[pick] = 1;
+    out[k] = pick;
+  }
+  return out;
+}
+
+/** How many more labels to collect before retraining is worth the CPU. */
+const retrainStride = (n) => Math.max(10, Math.round(n / 25));
+
+/**
+ * One unaveraged fit on exactly the labels collected so far. Unlike the sweep
+ * this is a single run with a single seed, so it is noisy — which is the point
+ * of showing it next to the averaged sweep rather than instead of it.
+ */
+function liveEval(world, rows, opts = {}) {
+  const t = world.test;
+  const out = { n: rows.length, positives: 0 };
+  for (let i = 0; i < rows.length; i++) out.positives += world.pool.y[rows[i]];
+
+  const gbm = E.gbmFit(world.Bpool, world.pool.y, rows, 32,
+    { rounds: opts.rounds || 60, depth: 3, lr: 0.12 });
+  const svm = E.svmFit(world.Zpool, world.D, world.pool.y, rows,
+    { epochs: opts.epochs || 24, seed: 7 });
+
+  for (const [key, model, scoreFn, mat] of [
+    ['gbm', gbm, E.gbmScore, world.Btest],
+    ['svm', svm, E.svmScore, world.Ztest],
+  ]) {
+    if (!model) { out[key] = null; continue; }
+    const sc = scoreFn(model, mat, t.n);
+    const ord = E.rankOrder(sc, t.n);
+    out[key] = {
+      ap: E.averagePrecision(sc, t.y, t.n, ord),
+      rec: E.recallAtFpr(sc, t.y, t.n, FPR, ord),
+      byKind: E.recallByKind(sc, t.y, t.kind, t.n, FPR, E.ATTACKS.length, ord),
+    };
+  }
+  return out;
+}
+
+const SWEEP = {
+  BUDGETS, FPR, POOL_N, TEST_N, STRATEGIES,
+  buildWorld, selectRows, evalBudget, evalBudgetAveraged, setGuidedTop, isAlert,
+  QUEUE_CAP, queueOrder, retrainStride, liveEval,
+};
+
+/* ==================================================================== */
+/* APP                                                                  */
+/* ==================================================================== */
+(function () {
+  const E = ENGINE, S = SWEEP;
+  const $ = (id) => document.getElementById(id);
+  const RATES = [
+    { v: 0.005, label: '0.5%' },
+    { v: 0.01,  label: '1%'   },
+    { v: 0.02,  label: '2%'   },
+    { v: 0.05,  label: '5%'   },
+  ];
+  const SERIES = [
+    { key: 'iso', name: 'Isolation Forest', css: '--s-iso', dash: true,
+      sub: 'no labels' },
+    { key: 'gbm', name: 'Gradient boosting', css: '--s-gbm', dash: false,
+      sub: 'supervised' },
+    { key: 'svm', name: 'RBF-SVM', css: '--s-svm', dash: false,
+      sub: 'supervised' },
+  ];
+
+  const st = {
+    strategy: 'random',
+    rate: 0.01,
+    seed: 42,
+    world: null,
+    curves: {},          /* strategy -> array of budget results */
+    partial: null,       /* array being filled while running */
+    running: false,
+    token: 0,
+    pick: 5,
+    minutes: 8,
+    sweepStarted: false,
+  };
+
+  const cvar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmtN = (n) => n.toLocaleString('en-US');
+  const pct  = (x) => (x * 100).toFixed(0) + '%';
+
+  /* ------------------------------------------------------------ controls */
+
+  function buildSegs() {
+    const sSeg = $('seg-strat');
+    sSeg.innerHTML = '';
+    for (const [key, meta] of Object.entries(S.STRATEGIES)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = meta.name;
+      b.setAttribute('aria-pressed', String(key === st.strategy));
+      b.onclick = () => { if (st.strategy !== key) { st.strategy = key; buildSegs(); run(); } };
+      sSeg.appendChild(b);
+    }
+    const rSeg = $('seg-rate');
+    rSeg.innerHTML = '';
+    for (const r of RATES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = r.label;
+      b.setAttribute('aria-pressed', String(Math.abs(r.v - st.rate) < 1e-9));
+      b.onclick = () => {
+        if (Math.abs(r.v - st.rate) > 1e-9) {
+          st.rate = r.v; st.world = null; st.curves = {};
+          Q.ended = null; Q.order = null;
+          buildSegs(); run();
+          (async () => { await ensureWorld(); qRestart(); })();
+        }
+      };
+      rSeg.appendChild(b);
+    }
+    $('strat-note').textContent = S.STRATEGIES[st.strategy].blurb;
+  }
+
+  function buildLegend() {
+    const el = $('legend');
+    el.innerHTML = '';
+    for (const s of SERIES) {
+      const sp = document.createElement('span');
+      const sw = document.createElement('i');
+      sw.className = 'swatch' + (s.dash ? ' dash' : '');
+      sw.style.color = `var(${s.css})`;
+      sw.style.background = s.dash ? 'transparent' : `var(${s.css})`;
+      sp.appendChild(sw);
+      sp.appendChild(document.createTextNode(`${s.name} — ${s.sub}`));
+      el.appendChild(sp);
+    }
+  }
+
+  /* --------------------------------------------------------------- chart */
+
+  const W = 920, H = 440, M = { t: 26, r: 130, b: 52, l: 58 };
+  const PW = W - M.l - M.r, PH = H - M.t - M.b;
+  const B = S.BUDGETS;
+  const lx = (b) => M.l + (Math.log(b) - Math.log(B[0])) /
+                    (Math.log(B[B.length - 1]) - Math.log(B[0])) * PW;
+  const ly = (v) => M.t + (1 - v) * PH;
+
+  function el(tag, attrs, text) {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function drawChart() {
+    const svg = $('chart');
+    svg.innerHTML = '';
+    const data = st.partial || st.curves[st.strategy] || [];
+    const w = st.world;
+
+    /* grid + y axis */
+    for (let v = 0; v <= 1.0001; v += 0.2) {
+      svg.appendChild(el('line', {
+        x1: M.l, x2: M.l + PW, y1: ly(v), y2: ly(v),
+        stroke: cvar('--grid'), 'stroke-width': 1,
+      }));
+      svg.appendChild(el('text', {
+        x: M.l - 10, y: ly(v) + 4, 'text-anchor': 'end',
+        fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 11,
+      }, v.toFixed(1)));
+    }
+    svg.appendChild(el('text', {
+      x: -(M.t + PH / 2), y: 15, transform: 'rotate(-90)', 'text-anchor': 'middle',
+      fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 10,
+      'letter-spacing': '.12em',
+    }, 'AVERAGE PRECISION'));
+
+    /* x axis */
+    for (const b of B) {
+      svg.appendChild(el('line', {
+        x1: lx(b), x2: lx(b), y1: M.t + PH, y2: M.t + PH + 5,
+        stroke: cvar('--rule'), 'stroke-width': 1,
+      }));
+      svg.appendChild(el('text', {
+        x: lx(b), y: M.t + PH + 20, 'text-anchor': 'middle',
+        fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 11,
+      }, fmtN(b)));
+    }
+    svg.appendChild(el('line', {
+      x1: M.l, x2: M.l + PW, y1: M.t + PH, y2: M.t + PH,
+      stroke: cvar('--rule'), 'stroke-width': 1,
+    }));
+    svg.appendChild(el('text', {
+      x: M.l + PW / 2, y: H - 12, 'text-anchor': 'middle',
+      fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 10,
+      'letter-spacing': '.12em',
+    }, 'LABELLED FLOWS  (log scale)'));
+
+    if (!w) return;
+
+    /* base-rate floor */
+    svg.appendChild(el('line', {
+      x1: M.l, x2: M.l + PW, y1: ly(w.baseline), y2: ly(w.baseline),
+      stroke: cvar('--muted'), 'stroke-width': 1, 'stroke-dasharray': '2 4',
+    }));
+    svg.appendChild(el('text', {
+      x: M.l + PW + 8, y: ly(w.baseline) + 4,
+      fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 10,
+    }, 'random guess'));
+
+    /* alert ceiling marker */
+    if (st.strategy === 'rule' && w.alerts.length < B[B.length - 1]) {
+      const x = lx(Math.max(B[0], Math.min(B[B.length - 1], w.alerts.length)));
+      svg.appendChild(el('line', {
+        x1: x, x2: x, y1: M.t, y2: M.t + PH,
+        stroke: cvar('--rule'), 'stroke-width': 1, 'stroke-dasharray': '3 3',
+      }));
+      svg.appendChild(el('text', {
+        x: x + 6, y: M.t + 13, fill: cvar('--muted'),
+        'font-family': cvar('--f-mono'), 'font-size': 10,
+      }, `only ${fmtN(w.alerts.length)} alerts exist`));
+    }
+
+    /* iForest reference */
+    const iso = w.isoMetrics.ap;
+    svg.appendChild(el('line', {
+      x1: M.l, x2: M.l + PW, y1: ly(iso), y2: ly(iso),
+      stroke: cvar('--s-iso'), 'stroke-width': 2, 'stroke-dasharray': '7 5',
+      'stroke-linecap': 'round',
+    }));
+    svg.appendChild(el('text', {
+      x: M.l + PW + 8, y: ly(iso) - 5, fill: cvar('--s-iso'),
+      'font-family': cvar('--f-mono'), 'font-size': 11, 'font-weight': 500,
+    }, 'Isolation Forest'));
+    svg.appendChild(el('text', {
+      x: M.l + PW + 8, y: ly(iso) + 9, fill: cvar('--muted'),
+      'font-family': cvar('--f-mono'), 'font-size': 10,
+    }, `${iso.toFixed(3)} · 0 labels`));
+
+    /* supervised curves — points dodged 3.5px so the two error bars never collide */
+    for (const key of ['gbm', 'svm']) {
+      const col = cvar(key === 'gbm' ? '--s-gbm' : '--s-svm');
+      const dx = key === 'gbm' ? -3.5 : 3.5;
+      const pts = data.map((d, i) => d && d[key] ? { x: lx(B[i]) + dx, d: d[key] } : null)
+                      .filter(Boolean);
+      if (!pts.length) continue;
+
+      for (const p of pts) {
+        if (p.d.apHi - p.d.apLo < 0.004) continue;
+        svg.appendChild(el('line', {
+          x1: p.x, x2: p.x, y1: ly(p.d.apLo), y2: ly(p.d.apHi),
+          stroke: col, 'stroke-width': 1.5, 'stroke-opacity': .5, 'stroke-linecap': 'round',
+        }));
+      }
+      svg.appendChild(el('path', {
+        d: pts.map((p, i) => (i ? 'L' : 'M') + p.x + ',' + ly(p.d.ap)).join(''),
+        fill: 'none', stroke: col, 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
+      for (const p of pts) {
+        svg.appendChild(el('circle', {
+          cx: p.x, cy: ly(p.d.ap), r: 4.5, fill: col,
+          stroke: cvar('--surface'), 'stroke-width': 2,
+        }));
+      }
+      const last = pts[pts.length - 1];
+      if (data.length === B.length) {
+        svg.appendChild(el('text', {
+          x: M.l + PW + 8, y: ly(last.d.ap) + (key === 'gbm' ? -3 : 12),
+          fill: col, 'font-family': cvar('--f-mono'), 'font-size': 11, 'font-weight': 500,
+        }, key === 'gbm' ? 'Boosting' : 'RBF-SVM'));
+      }
+    }
+
+    /* selected-budget rule */
+    if (data[st.pick]) {
+      svg.appendChild(el('line', {
+        x1: lx(B[st.pick]), x2: lx(B[st.pick]), y1: M.t, y2: M.t + PH,
+        stroke: cvar('--ink'), 'stroke-width': 1, 'stroke-opacity': .22,
+      }));
+    }
+
+    /* hover layer */
+    const hit = el('rect', {
+      x: M.l, y: M.t, width: PW, height: PH, fill: 'transparent',
+      style: 'cursor:crosshair',
+    });
+    hit.addEventListener('mousemove', (ev) => {
+      const r = svg.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width * W;
+      let bi = 0, best = Infinity;
+      B.forEach((b, i) => { const d = Math.abs(lx(b) - px); if (d < best) { best = d; bi = i; } });
+      showTip(bi, ev);
+    });
+    hit.addEventListener('mouseleave', () => { $('tt').style.opacity = 0; });
+    hit.addEventListener('click', () => {
+      const t = $('tt');
+      if (t.dataset.i !== undefined) { st.pick = +t.dataset.i; $('scrub').value = st.pick; render(); }
+    });
+    svg.appendChild(hit);
+  }
+
+  function showTip(bi, ev) {
+    const tt = $('tt');
+    const data = st.partial || st.curves[st.strategy] || [];
+    const d = data[bi], w = st.world;
+    if (!d || !w) { tt.style.opacity = 0; return; }
+    tt.dataset.i = bi;
+    const row = (name, css, v, extra) =>
+      `<div><i class="k" style="background:var(${css})"></i>${name} <b>${v.toFixed(3)}</b>${extra || ''}</div>`;
+    tt.innerHTML =
+      `<div style="margin-bottom:5px"><b>${fmtN(d.labelled)} labelled</b> · ` +
+      `${d.positives.toFixed(1)} attacks in the sample</div>` +
+      row('Isolation Forest', '--s-iso', w.isoMetrics.ap) +
+      row('Boosting', '--s-gbm', d.gbm.ap,
+        d.gbm.failed ? ` <span style="color:var(--muted)">· ${d.gbm.failed}/${d.reps} runs had nothing to learn from</span>` : '') +
+      row('RBF-SVM', '--s-svm', d.svm.ap);
+    const host = $('chart').closest('.chart-host').getBoundingClientRect();
+    tt.style.opacity = 1;
+    const x = ev.clientX - host.left + 14;
+    tt.style.left = Math.min(x, host.width - tt.offsetWidth - 8) + 'px';
+    tt.style.top = (ev.clientY - host.top - tt.offsetHeight - 10) + 'px';
+  }
+
+  /* ------------------------------------------------------- derived numbers */
+
+  /** Log-interpolated budget at which a curve first crosses the iForest line. */
+  function crossover(curve, key, target) {
+    for (let i = 1; i < curve.length; i++) {
+      const a = curve[i - 1], b = curve[i];
+      if (!a || !b || !a[key] || !b[key]) continue;
+      if (a[key].ap < target && b[key].ap >= target) {
+        const f = (target - a[key].ap) / (b[key].ap - a[key].ap);
+        return Math.round(Math.exp(Math.log(B[i - 1]) + f * (Math.log(B[i]) - Math.log(B[i - 1]))));
+      }
+    }
+    const lastOk = curve.filter((d) => d && d[key]).pop();
+    return lastOk && lastOk[key].ap >= target ? B[0] : null;
+  }
+
+  function renderTiles() {
+    const t = $('tiles');
+    const curve = st.curves[st.strategy];
+    const w = st.world;
+    if (!curve || !w) { t.innerHTML = ''; return; }
+    const iso = w.isoMetrics.ap;
+    const xg = crossover(curve, 'gbm', iso);
+    const xs = crossover(curve, 'svm', iso);
+    const best = curve.reduce((m, d) => Math.max(m, d.gbm.ap, d.svm.ap), 0);
+    const cur = curve[st.pick];
+    const bestKey = cur.gbm.ap >= cur.svm.ap ? 'gbm' : 'svm';
+    const missed = 1 - cur[bestKey].rec;
+
+    const tile = (k, v, s, colour) =>
+      `<div class="tile"><span class="tile-k">${k}</span>` +
+      `<span class="tile-v"${colour ? ` style="color:var(${colour})"` : ''}>${v}</span>` +
+      `<span class="tile-s">${s}</span></div>`;
+
+    const both = [xg, xs].filter((x) => x !== null);
+    const soonest = both.length ? Math.min(...both) : null;
+
+    t.innerHTML =
+      tile('Labels to beat the free model',
+        soonest === null ? 'never' : fmtN(soonest),
+        soonest === null
+          ? `Neither supervised model reaches ${iso.toFixed(3)} anywhere in this sweep.`
+          : `Boosting crosses at ${xg === null ? '—' : fmtN(xg)}, the SVM at ${xs === null ? '—' : fmtN(xs)}.`) +
+      tile('Isolation Forest, for free', iso.toFixed(3),
+        `Average precision with zero labelled examples. The base rate is ${(w.baseline * 100).toFixed(2)}%.`,
+        '--s-iso') +
+      tile('Best reached in this sweep', best.toFixed(3),
+        `At ${fmtN(B[B.length - 1])} labels — ${fmtN(w.pool.n)} flows exist to label from.`) +
+      tile('Attacks still missed',
+        pct(missed),
+        `At ${fmtN(cur.labelled)} labels, the better supervised model misses ${pct(missed)} of attacks inside a 1% false-positive budget.`);
+  }
+
+  function renderScrub() {
+    const curve = st.curves[st.strategy] || st.partial;
+    const d = curve && curve[st.pick];
+    const v = $('scrub-val');
+    if (!d) { v.textContent = ''; return; }
+    v.innerHTML = `<b>${fmtN(d.labelled)}</b> labelled flows <em>· ` +
+      `${d.positives.toFixed(1)} of them attacks` +
+      (d.capped ? ` · capped — the rules only ever fired ${fmtN(st.world.alerts.length)} times` : '') +
+      `</em>`;
+  }
+
+  function renderCost() {
+    const curve = st.curves[st.strategy];
+    const w = st.world;
+    if (!curve || !w) return;
+    const iso = w.isoMetrics.ap;
+    const hrs = (n) => (n * st.minutes / 60);
+    const fmtH = (h) => h < 16 ? `${h.toFixed(0)} hours`
+      : h < 240 ? `${Math.round(h / 8)} analyst-days`
+      : `${(h / 8 / 21).toFixed(1)} analyst-months`;
+
+    const xr = st.curves.random ? crossover(st.curves.random, 'gbm', iso) : null;
+    const xg = st.curves.guided ? crossover(st.curves.guided, 'gbm', iso) : null;
+    const here = crossover(curve, 'gbm', iso);
+
+    let out = '';
+    if (here !== null) {
+      out = `Under <b>${S.STRATEGIES[st.strategy].name.toLowerCase()}</b>, boosting needs about ` +
+        `<b>${fmtN(here)}</b> labelled flows to match the free model — ` +
+        `<b>${fmtH(hrs(here))}</b> of someone's working life. ` +
+        `Reaching the top of this sweep, ${fmtN(B[B.length - 1])} labels, costs ${fmtH(hrs(B[B.length - 1]))}.`;
+    } else {
+      out = `Under <b>${S.STRATEGIES[st.strategy].name.toLowerCase()}</b>, boosting never catches ` +
+        `the unsupervised model anywhere in this sweep, at any price.`;
+    }
+    $('cost-out').innerHTML = out;
+
+    let note = '';
+    if (xr !== null && xg !== null && xg < xr) {
+      note = `Switch the labelling strategy above and the price changes without the model changing at all: ` +
+        `${fmtN(xr)} labels under a random audit (${fmtH(hrs(xr))}) against ${fmtN(xg)} when the Isolation Forest ` +
+        `picks what to label (${fmtH(hrs(xg))}). Same features, same boosting hyper-parameters, ` +
+        `${(xr / xg).toFixed(1)}× the analyst time. The unsupervised model's real job is not to be the detector — ` +
+        `it is to spend the label budget.`;
+    } else {
+      note = 'Run the other labelling strategies above to compare — the comparison needs both curves.';
+    }
+    $('cost-note').innerHTML = note;
+  }
+
+  function renderArch() {
+    const tb = $('arch').querySelector('tbody');
+    const curve = st.curves[st.strategy] || st.partial;
+    const w = st.world;
+    if (!curve || !curve[st.pick] || !w) { tb.innerHTML = ''; return; }
+    const d = curve[st.pick];
+    const covers = ['nothing — it is loud', 'nothing — it is loud', 'careless users',
+                    'the nightly backup upload', 'service health checks'];
+    const share = new Array(E.ATTACKS.length).fill(0);
+    let tot = 0;
+    for (let i = 0; i < w.test.n; i++) if (w.test.y[i]) { share[w.test.kind[i]]++; tot++; }
+
+    tb.innerHTML = E.ATTACKS.map((a, k) => {
+      const rows = [
+        ['Isolation Forest', '--s-iso', w.isoMetrics.byKind[k]],
+        ['Boosting', '--s-gbm', d.gbm.byKind[k]],
+        ['RBF-SVM', '--s-svm', d.svm.byKind[k]],
+      ].map(([n, c, v]) =>
+        `<div class="brow" title="${n}: ${(v * 100).toFixed(0)}% recall">` +
+        `<span class="btrack"><span class="bfill" style="width:${(v * 100).toFixed(1)}%;background:var(${c})"></span></span>` +
+        `<span class="bnum">${(v * 100).toFixed(0)}%</span></div>`).join('');
+      return `<tr><td class="name">${a.name}</td>` +
+        `<td><span class="tag">${covers[k]}</span></td>` +
+        `<td class="cover"><div class="barset">${rows}</div></td>` +
+        `<td class="num">${tot ? Math.round(share[k] / tot * 100) : 0}%</td></tr>`;
+    }).join('');
+
+    let alertBeacons = 0;
+    for (const i of w.alerts) if (w.pool.y[i] && w.pool.kind[i] === 4) alertBeacons++;
+    $('arch-note').innerHTML =
+      `Bars are Isolation Forest, then boosting, then the SVM, at <b>${fmtN(d.labelled)}</b> labelled flows ` +
+      `under ${S.STRATEGIES[st.strategy].name.toLowerCase()}. ` +
+      `The Isolation Forest takes ${pct(w.isoMetrics.byKind[0])} of port scans and ` +
+      `${pct(w.isoMetrics.byKind[4])} of beacons, because a beacon is not anomalous — it is a health check that ` +
+      `happens to be malicious. Boosting reaches ${pct(d.gbm.byKind[4])} on beacons here, and every point of that ` +
+      `came from a human labelling one. The signature rules fired on <b>${alertBeacons}</b> beacons out of ` +
+      `${fmtN(w.alerts.length)} alerts, so under <span class="mono">Signature alerts</span> there is never a beacon ` +
+      `in the training set at any budget — which is the whole reason that curve stops climbing.`;
+  }
+
+  function renderSpec() {
+    const w = st.world;
+    const cell = (k, v, sub) =>
+      `<div><dt>${k}</dt><dd>${v}${sub ? `<small>${sub}</small>` : ''}</dd></div>`;
+    $('spec').innerHTML =
+      cell('Unlabelled pool', w ? fmtN(w.pool.n) : '—', 'flows to label from') +
+      cell('Held-out test', w ? fmtN(w.test.n) : '—', 'never seen in training') +
+      cell('Benign profiles', String(E.BENIGN.length), 'web, DNS, SSH, bulk, backup, health') +
+      cell('Attack archetypes', String(E.ATTACKS.length), 'two of them stealthy') +
+      cell('Features per flow', String(E.F), 'all continuous') +
+      cell('Prevalence', w ? (w.baseline * 100).toFixed(2) + '%' : '—',
+        w ? `${fmtN(w.poolPos)} attacks in the pool` : '');
+  }
+
+  function render() {
+    renderSpec();
+    drawChart();
+    renderTiles();
+    renderScrub();
+    renderCost();
+    renderArch();
+  }
+
+  /* ------------------------------------------------------------- running */
+
+  const yieldFrame = () => new Promise((r) => setTimeout(r, 0));
+
+  function status(text, frac, idle) {
+    $('runtext').textContent = text;
+    $('barfill').style.width = ((frac || 0) * 100).toFixed(1) + '%';
+    $('runbar').classList.toggle('idle', !!idle);
+  }
+
+  async function ensureWorld() {
+    if (st.world) return;
+    status('generating traffic…', 0.05);
+    await yieldFrame();
+    const t0 = performance.now();
+    st.world = S.buildWorld(st.rate, st.seed, (s) => status(s.toLowerCase() + '…', 0.2));
+    $('stamp').textContent =
+      `${fmtN(st.world.pool.n)} flows synthesised in ${Math.round(performance.now() - t0)} ms`;
+    $('foot-run').textContent =
+      `seed ${st.seed} · ${fmtN(st.world.poolPos)} attacks in the pool · ` +
+      `${fmtN(st.world.alerts.length)} signature alerts`;
+    render();
+  }
+
+  async function run() {
+    const my = ++st.token;
+    st.running = true;
+    st.sweepStarted = true;
+    $('reroll').disabled = true;
+    qSetRunning(false, 'sweep');
+
+    await ensureWorld();
+    if (my !== st.token) return;
+
+    if (st.curves[st.strategy]) {
+      st.partial = null;
+      status('cached', 1, true);
+      st.running = false;
+      $('reroll').disabled = false;
+      render();
+      qSetRunning(true, 'sweep');
+      return;
+    }
+
+    st.partial = [];
+    for (let i = 0; i < B.length; i++) {
+      status(`training on ${fmtN(B[i])} labelled flows…`, i / B.length);
+      await yieldFrame();
+      if (my !== st.token) return;
+      st.partial.push(S.evalBudgetAveraged(st.world, st.strategy, B[i]));
+      drawChart();
+      renderScrub();
+      renderArch();
+    }
+    if (my !== st.token) return;
+    st.curves[st.strategy] = st.partial;
+    st.partial = null;
+    status(`${B.length} budgets × repeated seeds · done`, 1, true);
+    st.running = false;
+    $('reroll').disabled = false;
+    render();
+    qBanner();
+    qSetRunning(true, 'sweep');
+  }
+
+
+  /* ===================================================================== */
+  /* THE QUEUE                                                             */
+  /* ===================================================================== */
+
+  const SPEEDS = [
+    { label: '1×', rate: 6 },
+    { label: '5×', rate: 30 },
+    { label: '15×', rate: 90 },
+  ];
+
+  const Q = {
+    strategy: 'random', speed: 30, seedBump: 0,
+    baseSeed: 1 + Math.floor(Math.random() * 100000),
+    order: null, cursor: 0, nextAt: 10, pos: 0,
+    hist: [], feed: [], crossed: null, ended: null, above: 0, fellBack: false,
+    running: false, userPaused: false, visible: true, blocked: null,
+    acc: 0, last: 0, raf: 0, dirtyFeed: true, feedAt: 0,
+  };
+
+  const QW = 620, QH = 340, QM = { t: 20, r: 112, b: 66, l: 44 };
+  const QPW = QW - QM.l - QM.r, QPH = QH - QM.t - QM.b;
+  const QX0 = 10;
+  const qx = (n) => QM.l + (Math.log(Math.max(QX0, n)) - Math.log(QX0)) /
+                    (Math.log(S.QUEUE_CAP) - Math.log(QX0)) * QPW;
+  const QTICKS = [10, 30, 100, 300, 1000, 3200];
+  const qy = (v) => QM.t + (1 - v) * QPH;
+  const daysAt = (n) => n * st.minutes / 60 / 8;
+  const fmtDays = (d) => (d < 1 ? `${(d * 8).toFixed(1)} h` : `${d.toFixed(1)} d`);
+
+  function buildQueueSegs() {
+    const a = $('qseg-strat');
+    a.innerHTML = '';
+    for (const [key, meta] of Object.entries(S.STRATEGIES)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = meta.name;
+      b.setAttribute('aria-pressed', String(key === Q.strategy));
+      b.onclick = () => { if (Q.strategy !== key) { Q.strategy = key; buildQueueSegs(); qRestart(); } };
+      a.appendChild(b);
+    }
+    const c = $('qseg-speed');
+    c.innerHTML = '';
+    for (const sp of SPEEDS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = sp.label;
+      b.setAttribute('aria-pressed', String(sp.rate === Q.speed));
+      b.onclick = () => { Q.speed = sp.rate; buildQueueSegs(); };
+      c.appendChild(b);
+    }
+  }
+
+  function qRestart() {
+    if (!st.world) return;
+    Q.seedBump++;
+    Q.order = S.queueOrder(st.world, Q.strategy,
+      (Q.baseSeed + Q.seedBump * 17) | 0, S.QUEUE_CAP);
+    Q.cursor = 0; Q.nextAt = 10; Q.pos = 0;
+    Q.hist = []; Q.feed = []; Q.crossed = null; Q.ended = null;
+    Q.above = 0; Q.fellBack = false;
+    Q.acc = 0; Q.dirtyFeed = true;
+    qDraw(); qStats(); qFeed(); qBanner();
+    qSetRunning(!Q.userPaused, 'restart');
+  }
+
+  /** `why` lets the sweep and the viewport pause the queue without fighting
+      the user's own Pause button. */
+  function qSetRunning(on, why) {
+    if (why === 'user') Q.userPaused = !on;
+    if (why === 'view') Q.visible = on;
+    if (why === 'sweep') Q.blocked = on ? null : 'sweep';
+
+    const should = !Q.userPaused && Q.visible && !Q.blocked && !Q.ended && !!Q.order;
+    $('qtoggle').textContent = Q.userPaused ? 'Resume' : 'Pause';
+    $('livepill').classList.toggle('paused', !should);
+    $('livepill').textContent = Q.ended ? 'ended' : (should ? 'live' : 'paused');
+
+    if (should && !Q.running) {
+      Q.running = true; Q.last = performance.now();
+      Q.raf = requestAnimationFrame(qTick);
+    } else if (!should && Q.running) {
+      Q.running = false; cancelAnimationFrame(Q.raf);
+    }
+  }
+
+  function qTick(ts) {
+    if (!Q.running) return;
+    const dt = Math.min(0.2, (ts - Q.last) / 1000);
+    Q.last = ts;
+    Q.acc += dt * Q.speed;
+    const take = Math.floor(Q.acc);
+    if (take > 0) { Q.acc -= take; qAdvance(take); }
+    if (ts - Q.feedAt > 140 && Q.dirtyFeed) { qFeed(); Q.feedAt = ts; Q.dirtyFeed = false; }
+    if (Q.running) Q.raf = requestAnimationFrame(qTick);
+  }
+
+  function qAdvance(k) {
+    const ord = Q.order, w = st.world;
+    const end = Math.min(ord.length, Q.cursor + k);
+    for (let i = Q.cursor; i < end; i++) {
+      const row = ord[i];
+      const atk = w.pool.y[row] === 1;
+      if (atk) Q.pos++;
+      Q.feed.unshift({ name: E.kindName(w.pool.kind[row]), atk });
+    }
+    if (Q.feed.length > 9) Q.feed.length = 9;
+    Q.cursor = end;
+    Q.dirtyFeed = true;
+
+    if (Q.cursor >= Q.nextAt) {
+      qRetrain();
+      Q.nextAt = Q.cursor + S.retrainStride(Q.cursor);
+      qDraw();
+    }
+    qStats();
+
+    if (Q.cursor >= ord.length) {
+      Q.ended = ord.length >= S.QUEUE_CAP ? 'cap' : 'dry';
+      qRetrain(); qDraw(); qSetRunning(false, 'end');
+    }
+    qBanner();
+  }
+
+  /* A single run is noisy enough that one lucky retrain can clear the line and
+     fall straight back. So a crossing only counts once boosting has held above
+     the free model for three retrains in a row — and if it later drops back
+     below, the banner says so rather than leaving a flattering claim standing. */
+  const HOLD = 3;
+
+  function qRetrain() {
+    const r = S.liveEval(st.world, Q.order.subarray(0, Q.cursor));
+    const iso = st.world.isoMetrics.ap;
+    Q.hist.push({ n: Q.cursor, gbm: r.gbm, svm: r.svm, pos: r.positives });
+
+    const clear = !!(r.gbm && r.gbm.ap >= iso);
+    if (clear) {
+      Q.above++;
+      if (!Q.crossed && Q.above >= HOLD) {
+        /* credit the first of the three retrains that held, and report the
+           positives it actually had — not the count by the time it latched */
+        const first = Q.hist[Q.hist.length - HOLD];
+        Q.crossed = { n: first.n, ap: first.gbm.ap, pos: first.pos };
+      }
+    } else {
+      Q.above = 0;
+      if (Q.crossed) Q.fellBack = true;
+    }
+  }
+
+  function qDraw() {
+    const svg = $('qchart');
+    svg.innerHTML = '';
+    const w = st.world;
+
+    for (let v = 0; v <= 1.0001; v += 0.25) {
+      svg.appendChild(el('line', { x1: QM.l, x2: QM.l + QPW, y1: qy(v), y2: qy(v),
+        stroke: cvar('--grid'), 'stroke-width': 1 }));
+      svg.appendChild(el('text', { x: QM.l - 9, y: qy(v) + 4, 'text-anchor': 'end',
+        fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 10.5 },
+        v.toFixed(2)));
+    }
+    svg.appendChild(el('line', { x1: QM.l, x2: QM.l + QPW, y1: QM.t + QPH, y2: QM.t + QPH,
+      stroke: cvar('--rule'), 'stroke-width': 1 }));
+
+    for (const n of QTICKS) {
+      svg.appendChild(el('line', { x1: qx(n), x2: qx(n), y1: QM.t + QPH, y2: QM.t + QPH + 4,
+        stroke: cvar('--rule'), 'stroke-width': 1 }));
+      svg.appendChild(el('text', { x: qx(n), y: QM.t + QPH + 18, 'text-anchor': 'middle',
+        fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 10.5 }, fmtN(n)));
+      svg.appendChild(el('text', { x: qx(n), y: QM.t + QPH + 33, 'text-anchor': 'middle',
+        fill: cvar('--rule'), 'font-family': cvar('--f-mono'), 'font-size': 9.5 },
+        fmtDays(daysAt(n))));
+    }
+    svg.appendChild(el('text', { x: QM.l, y: QH - 8,
+      fill: cvar('--muted'), 'font-family': cvar('--f-mono'), 'font-size': 9.5,
+      'letter-spacing': '.12em' }, 'LABELS BOUGHT  /  ANALYST TIME'));
+
+    if (!w) return;
+
+    const iso = w.isoMetrics.ap;
+    const tags = [{ y: qy(iso), col: cvar('--s-iso'), text: `Forest ${iso.toFixed(3)}` }];
+
+    svg.appendChild(el('line', { x1: QM.l, x2: QM.l + QPW, y1: qy(iso), y2: qy(iso),
+      stroke: cvar('--s-iso'), 'stroke-width': 2, 'stroke-dasharray': '7 5',
+      'stroke-linecap': 'round' }));
+
+    if (Q.crossed) {
+      svg.appendChild(el('line', { x1: qx(Q.crossed.n), x2: qx(Q.crossed.n),
+        y1: QM.t, y2: QM.t + QPH, stroke: cvar('--good'), 'stroke-width': 1,
+        'stroke-dasharray': '3 3' }));
+      svg.appendChild(el('circle', { cx: qx(Q.crossed.n), cy: qy(Q.crossed.ap), r: 6,
+        fill: 'none', stroke: cvar('--good'), 'stroke-width': 2 }));
+    }
+
+    for (const [key, tok, label] of [['gbm', '--s-gbm', 'Boosting'], ['svm', '--s-svm', 'RBF-SVM']]) {
+      const pts = Q.hist.filter((h) => h[key]).map((h) => [qx(h.n), qy(h[key].ap)]);
+      if (!pts.length) continue;
+      svg.appendChild(el('path', {
+        d: pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(''),
+        fill: 'none', stroke: cvar(tok), 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+      const last = pts[pts.length - 1];
+      svg.appendChild(el('circle', { cx: last[0], cy: last[1], r: 4, fill: cvar(tok),
+        stroke: cvar('--surface'), 'stroke-width': 2 }));
+      tags.push({ y: last[1], col: cvar(tok),
+        text: `${label} ${Q.hist[Q.hist.length - 1][key].ap.toFixed(3)}` });
+    }
+
+    /* push the right-hand labels apart so they never overprint each other */
+    tags.sort((a, b) => a.y - b.y);
+    const GAP = 14;
+    for (let i = 1; i < tags.length; i++) {
+      if (tags[i].y - tags[i - 1].y < GAP) tags[i].y = tags[i - 1].y + GAP;
+    }
+    const overshoot = tags[tags.length - 1].y - (QM.t + QPH);
+    if (overshoot > 0) for (const t of tags) t.y -= overshoot;
+    for (const t of tags) {
+      svg.appendChild(el('text', { x: QM.l + QPW + 8, y: t.y + 3.5, fill: t.col,
+        'font-family': cvar('--f-mono'), 'font-size': 10.5 }, t.text));
+    }
+  }
+
+  function qStats() {
+    const w = st.world;
+    if (!w) return;
+    const last = Q.hist.length ? Q.hist[Q.hist.length - 1] : null;
+    const best = last && last.gbm && last.svm
+      ? Math.max(last.gbm.ap, last.svm.ap) : (last && last.gbm ? last.gbm.ap : null);
+    const gap = best === null ? null : best - w.isoMetrics.ap;
+
+    const cell = (k, v, sub, colour) =>
+      `<div class="qstat"><span class="k">${k}</span>` +
+      `<span class="v"${colour ? ` style="color:var(${colour})"` : ''}>${v}</span>` +
+      `<span class="s">${sub}</span></div>`;
+
+    $('qstats').innerHTML =
+      cell('Labels bought', fmtN(Q.cursor),
+        Q.order ? `of ${fmtN(Q.order.length)} this queue can supply` : '') +
+      cell('Attacks among them', fmtN(Q.pos),
+        Q.cursor ? `${(Q.pos / Q.cursor * 100).toFixed(1)}% of what the analyst saw` : '—') +
+      cell('Analyst time spent', fmtDays(daysAt(Q.cursor)),
+        `at ${st.minutes} minutes a flow`) +
+      (gap === null
+        ? cell('Against the free model', 'no model yet',
+            'not one attack in the sample — nothing to train on', '--muted')
+        : cell('Against the free model',
+            (gap >= 0 ? '+' : '−') + Math.abs(gap).toFixed(3),
+            gap >= 0 ? 'ahead of the model that cost nothing'
+                     : 'behind the model that cost nothing',
+            gap >= 0 ? '--good' : '--critical'));
+  }
+
+  function qFeed() {
+    $('qlist').innerHTML = Q.feed.map((f, i) =>
+      `<li class="${f.atk ? 'atk' : ''}${i === 0 ? ' new' : ''}">` +
+      `<span class="d"></span><span class="who">${f.name}</span> ` +
+      `<span class="lab">${f.atk ? 'attack' : 'benign'}</span></li>`).join('');
+  }
+
+  function qBanner() {
+    const b = $('qbanner'), w = st.world;
+    if (!w) return;
+    b.className = 'qbanner';
+    let html;
+
+    if (Q.ended === 'dry') {
+      b.classList.add('dry');
+      let beacons = 0;
+      for (const i of w.alerts) if (w.pool.y[i] && w.pool.kind[i] === 4) beacons++;
+      html = `<b>The queue is empty.</b> The signature rules only ever fired ` +
+        `${fmtN(w.alerts.length)} times in ${fmtN(w.pool.n)} flows, and ${beacons} of those ` +
+        `were beacons. There is nothing left to buy at any price — ` +
+        (Q.crossed ? 'and it did pass the free model on the way.'
+                   : 'and it never passed the free model.');
+    } else if (Q.crossed) {
+      b.classList.add(Q.fellBack ? 'dry' : 'hit');
+      html = `<b>Passed the free model after ${fmtN(Q.crossed.n)} labels</b> — ` +
+        `${fmtDays(daysAt(Q.crossed.n))} of analyst time.`;
+
+      /* Name the luck of the draw out loud. A single queue can cross far earlier
+         or later than the averaged sweep, and the reason is always the same: how
+         many attacks happened to turn up early. */
+      const exp = Q.crossed.n * w.baseline;
+      const got = Q.crossed.pos;
+      const ratio = got / Math.max(0.3, exp);
+      html += ` Those ${fmtN(Q.crossed.n)} flows held <b>${fmtN(got)}</b> attacks where the ` +
+        `base rate predicts ${exp.toFixed(1)} — ` +
+        (ratio > 1.6 ? 'a generous draw, so this run crossed early.'
+         : ratio < 0.65 ? 'a thin draw, so this run had to work for it.'
+         : 'about what you would expect.');
+
+      const curve = st.curves[Q.strategy];
+      if (curve) {
+        const avg = crossover(curve, 'gbm', w.isoMetrics.ap);
+        if (avg !== null) {
+          html += ` Averaged over many draws, the sweep below puts the crossing nearer ` +
+            `<b>${fmtN(avg)}</b>.`;
+        }
+      }
+      if (Q.fellBack) {
+        html += ` <b>It has since fallen back below</b> — one run at this scale is noisy, ` +
+          `which is exactly what the averaged sweep is for.`;
+      }
+    } else if (Q.ended === 'cap') {
+      html = `<b>${fmtN(Q.cursor)} labels in and still behind.</b> ` +
+        `${fmtDays(daysAt(Q.cursor))} of analyst time bought a model that has not yet ` +
+        `caught the one that cost nothing.`;
+    } else if (Q.pos === 0) {
+      html = `${fmtN(Q.cursor)} flows labelled, <b>not one of them an attack</b>. ` +
+        `At a ${(w.baseline * 100).toFixed(2)}% base rate this is the ordinary case, and ` +
+        `there is no supervised model to speak of until it changes.`;
+    } else {
+      html = `Retraining every ${fmtN(S.retrainStride(Q.cursor))} labels. ` +
+        `The Isolation Forest line never moves — it was never given any of these.`;
+    }
+    b.innerHTML = html;
+  }
+
+  /* ---------------------------------------------------------------- wire */
+
+  $('scrub').max = String(B.length - 1);
+  $('scrub').value = String(st.pick);
+  $('scrub').addEventListener('input', (e) => { st.pick = +e.target.value; render(); });
+  $('minutes').addEventListener('input', (e) => {
+    const v = Math.max(1, Math.min(60, +e.target.value || 8));
+    st.minutes = v; renderCost(); qDraw(); qStats(); qBanner();
+  });
+  $('reroll').addEventListener('click', () => {
+    st.seed = 1 + Math.floor(Math.random() * 100000);
+    st.world = null; st.curves = {}; st.partial = null; st.sweepStarted = false;
+    Q.ended = null; Q.order = null;
+    (async () => { await ensureWorld(); qRestart(); if (st.sweepStarted) run(); })();
+  });
+  window.addEventListener('resize', () => { $('tt').style.opacity = 0; });
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener('change', () => { drawChart(); qDraw(); });
+  new MutationObserver(() => { drawChart(); qDraw(); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  $('qtoggle').addEventListener('click', () => qSetRunning(Q.userPaused, 'user'));
+  $('qrestart').addEventListener('click', qRestart);
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) Q.userPaused = true;
+
+  document.addEventListener('visibilitychange', () =>
+    qSetRunning(!document.hidden, 'view'));
+
+  new IntersectionObserver((es) => {
+    for (const e of es) if (!document.hidden) qSetRunning(e.isIntersecting, 'view');
+  }, { threshold: 0.05 }).observe($('qchart'));
+
+  new IntersectionObserver((es, obs) => {
+    for (const e of es) {
+      if (e.isIntersecting && !st.sweepStarted) { obs.disconnect(); run(); }
+    }
+  }, { threshold: 0.08 }).observe($('sweep'));
+
+  buildSegs();
+  buildQueueSegs();
+  buildLegend();
+  renderSpec();
+  drawChart();
+  qDraw();
+
+  (async () => {
+    await ensureWorld();
+    qRestart();
+  })();
+})();
+</script>
+</body>
+</html>

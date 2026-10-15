@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHAROS-Rx | Isaiah Thompson Ocansey</title>
+<meta name="description" content="Cohort-grounded retrieval-augmented synthesis over 215,063 patient drug reviews, with stratified evidence sampling, computed pharmacovigilance statistics, and claim-level verification.">
+<style>
+  :root{--navy:#0B1F33;--navy2:#102A43;--gold:#C8A45A;--ivory:#FAF8F5;--card:#fff;--text:#1A1A1A;--muted:#5B6770;--rule:#E6E2D9;--good:#1c5cab}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--ivory);line-height:1.65}
+  a{color:var(--good)}
+  nav{position:sticky;top:0;z-index:10;background:var(--navy);display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid rgba(200,164,90,.25)}
+  nav a{color:#fff;text-decoration:none;font-size:14px;opacity:.9}
+  nav .brand{color:var(--gold);font-weight:700;letter-spacing:1px;opacity:1}
+  header{background:linear-gradient(135deg,var(--navy),#061424);color:#fff;padding:72px 0 56px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  .eyebrow{color:var(--gold);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+  h1{font-size:clamp(32px,5vw,48px);margin:.2em 0 .1em;line-height:1.15}
+  header p.lede{color:#C9D6E3;font-size:18px;max-width:760px}
+  .tagline{font-style:italic;color:var(--gold)}
+  .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .btn{display:inline-block;padding:11px 20px;border-radius:8px;font-weight:600;text-decoration:none;font-size:15px}
+  .btn.primary{background:var(--gold);color:#111}
+  .btn.ghost{border:1px solid rgba(255,255,255,.4);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:34px}
+  .kpi{background:rgba(255,255,255,.06);border:1px solid rgba(200,164,90,.25);border-radius:12px;padding:16px}
+  .kpi b{display:block;font-size:30px;color:#fff;line-height:1.1}
+  .kpi span{color:#B8C7D6;font-size:13px}
+  section{padding:56px 0;border-bottom:1px solid var(--rule)}
+  section.dark{background:var(--navy2);color:#fff;border:0}
+  section.dark p,section.dark li{color:#D6E2EF}
+  h2{font-size:26px;margin:0 0 14px}
+  h3{font-size:18px;margin:22px 0 6px}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:20px;margin:14px 0}
+  blockquote{margin:18px 0;padding:14px 18px;border-left:4px solid var(--gold);background:#fff;font-weight:600}
+  pre{background:#0b1622;color:#e6edf3;padding:16px;border-radius:10px;overflow-x:auto;font-size:13px;line-height:1.5}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:14.5px;margin:12px 0}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{background:var(--navy);color:#fff;font-weight:600}
+  tr.hl td{background:#f3ede0;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .grid .card h3{margin-top:0;color:var(--navy)}
+  .muted{color:var(--muted)}
+  .note{font-size:14px;color:var(--muted)}
+  footer{background:var(--navy);color:#B8C7D6;padding:28px 20px;font-size:14px;text-align:center}
+  footer a{color:var(--gold)}
+  @media (max-width:600px){header{padding:48px 0 40px}section{padding:40px 0}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="../../">ITO</a>
+  <span><a href="../../#projects">&larr; All projects</a></span>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Case study &middot; LLM retrieval &middot; Pharmacovigilance</div>
+    <h1>PHAROS-Rx</h1>
+    <p class="tagline">Pharmacovigilance Agent for Retrieval-Ordered Synthesis &mdash; a lighthouse, not a prescription.</p>
+    <p class="lede">Cohort-grounded retrieval-augmented synthesis over <b>215,063 real patient drug reviews</b>, built to answer a question standard RAG cannot: is the evidence you retrieved representative of the population you claim to be summarising?</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/ocansey/pharos-rx">View the code on GitHub</a>
+      <a class="btn ghost" href="https://github.com/ocansey/pharos-rx/blob/main/docs/RESULTS.md">Full results tables</a>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b>&minus;75%</b><span>valence skew vs a conventional RAG retriever</span></div>
+      <div class="kpi"><b>&minus;43%</b><span>cohort rating error (0.67 &rarr; 0.38 stars)</span></div>
+      <div class="kpi"><b>1.000</b><span>stratum coverage across all 300 queries</span></div>
+      <div class="kpi"><b>42/42</b><span>red-team safety probes passed</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <h2>The problem</h2>
+    <p>Retrieval-augmented generation over an <i>opinion</i> corpus inherits a bias that has nothing to do with retrieval quality. Similarity search returns the passages most similar to the query &mdash; in patient narratives, the ones that discuss it <b>most emphatically</b>. The model then reports that skew faithfully.</p>
+    <blockquote>Every citation is real. Every sentence is grounded. The answer is still wrong about the world.</blockquote>
+    <p>This project names that failure &mdash; <b>retrieval-induced valence skew</b> &mdash; measures it, and fixes it architecturally. A real cohort from the corpus:</p>
+<pre>QUESTION: What side effects do people report on Levonorgestrel for Birth Control?
+
+THE COHORT (55 reviews) — ground truth
+   negative 21.8%   mixed 12.7%   positive 65.5%      mean rating 7.13/10
+
+CONVENTIONAL top-k
+   panel ratings: [1, 3, 4, 5, 5, 6, 7, 8, 8, 8, 9, 10]
+   panel mean 6.17/10     VSD 0.0229     off by 0.96 stars
+
+STRATIFIED (PHAROS)
+   panel ratings: [1, 3, 4, 5, 6, 7, 8, 8, 8, 10, 10, 10]
+   panel mean 6.67/10     VSD 0.0042     off by 0.46 stars</pre>
+    <p class="muted">A model reading only the conventional panel would report a gloomier picture than the data supports &mdash; with perfect citations.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Headline results</h2>
+    <p>300 queries, 8 configurations, one index. Paired bootstrap over 1,000 resamples. VSD = valence skew (Jensen&ndash;Shannon divergence between panel and cohort outcomes); CRE = cohort rating error in stars.</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Configuration</th><th>nDCG@10 &uarr;</th><th>Recall@10 &uarr;</th><th>VSD &darr;</th><th>CRE &darr;</th><th>Coverage &uarr;</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>PHAROS (full)</td><td>0.786</td><td>0.232</td><td>0.0082</td><td>0.377</td><td>1.000</td></tr>
+        <tr><td>no stratification</td><td>0.779</td><td>0.205</td><td>0.0312</td><td>0.662</td><td>0.878</td></tr>
+        <tr><td>uniform strata</td><td>0.786</td><td>0.232</td><td>0.0618</td><td>1.301</td><td>1.000</td></tr>
+        <tr><td>naive RAG baseline</td><td>0.838</td><td>0.324</td><td>0.0324</td><td>0.667</td><td>0.866</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="grid">
+      <div class="card"><h3>The control that matters</h3><p>Equal quotas per stratum (&ldquo;uniform strata&rdquo;) is <b>twice as bad as doing nothing</b> on cohort rating error (1.301 vs 0.667, <i>p</i> &lt; 0.001) while scoring a perfect 1.000 on coverage. Matching the cohort, not just covering it, is what works.</p></div>
+      <div class="card"><h3>Reported, not buried</h3><p>The naive baseline <b>beats PHAROS on nDCG and recall</b>. Reserving panel slots for minority outcomes means admitting slightly lower-ranked units &mdash; a trade the project argues is worth taking, and shows openly.</p></div>
+    </div>
+    <h3>The distortion grows with cohort size</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Cohort size</th><th>Queries</th><th>VSD (PHAROS)</th><th>VSD (baseline)</th><th>Coverage (PHAROS)</th><th>Coverage (baseline)</th></tr></thead>
+      <tbody>
+        <tr><td>1&ndash;12 reviews</td><td>75</td><td>0.0059</td><td>0.0266</td><td>1.000</td><td>0.931</td></tr>
+        <tr><td>13&ndash;30 reviews</td><td>184</td><td>0.0083</td><td>0.0328</td><td>1.000</td><td>0.853</td></tr>
+        <tr><td>31&ndash;80 reviews</td><td>39</td><td>0.0118</td><td>0.0394</td><td>1.000</td><td>0.812</td></tr>
+        <tr><td>81+ reviews</td><td>2</td><td>0.0155</td><td>0.0807</td><td>1.000</td><td>0.667</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<section class="dark">
+  <div class="wrap">
+    <h2>What is new here</h2>
+    <ol>
+      <li><b>Stratified Evidence Sampling</b> &mdash; retrieval treated as <i>sampling from a population</i>: panel slots are apportioned across outcome strata to match the cohort's true distribution.</li>
+      <li><b>Two metrics standard IR does not measure</b> &mdash; VSD and CRE quantify how unrepresentative a retrieved panel is, and how many stars a reader would be misled by.</li>
+      <li><b>The model never produces a number</b> &mdash; Wilson intervals, PRR, ROR, &chi;&sup2; and IC are computed deterministically and handed to the model pre-formatted with verifiable IDs.</li>
+      <li><b>Claim-level verification</b> that catches disguised quantity claims such as &ldquo;most reviewers report insomnia&rdquo;.</li>
+      <li><b>Data forensics</b> &mdash; 10.3% of this widely used public dataset carries an undocumented character-deletion defect (below).</li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>A defect in a heavily used public dataset</h2>
+    <p>The UCI ML Drug Review dataset (Gr&auml;&szlig;er et al., 2018; 215,063 Drugs.com reviews) is widely used raw. <code>pharos audit-labels</code> shows <b>175 labels covering 22,089 rows (10.3%)</b> are corrupted &mdash; for example <code>'Bipolar Disorde'</code> (5,604 rows) and <code>'ibromyalgia'</code> (2,370 rows).</p>
+    <p>The proof is structural: <b>of 917 distinct condition labels, exactly zero end in &ldquo;er&rdquo;</b> &mdash; impossible by chance in a vocabulary containing Cancer, Ulcer, Fever and Disorder. It matters because retrieval filters on condition: a question about bipolar disorder would otherwise match none of its 5,604 reviews.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Architecture</h2>
+    <p>The shape is the argument: refusal precedes retrieval, statistics precede generation, and verification follows it.</p>
+<pre>                          ┌──────────┐
+                          │  triage  │  rules first, model may only escalate
+                          └────┬─────┘
+              refuse ◄─────────┤  crisis · personal advice · out of scope
+                          ┌────▼─────┐  hybrid BM25 + dense, RRF, MMR,
+                          │ retrieve │  stratified quota allocation
+                          └────┬─────┘
+             abstain ◄─────────┤  panel below the sufficiency floor
+                          ┌────▼─────┐  Wilson · PRR · ROR · χ² · IC
+                          │ compute  │  deterministic, no model discretion
+                          └────┬─────┘
+                          ┌────▼──────┐
+                          │ synthesize│  arranges facts; never produces one
+                          └────┬──────┘
+                          ┌────▼─────┐  structural checks + entailment
+                          │  verify  │
+                          └────┬─────┘
+                          ┌────▼─────┐
+                          │ finalize │  strips what failed, states provenance
+                          └──────────┘</pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Safety and engineering</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Refuses what it shouldn't answer</h3>
+        <p>Asked &ldquo;should I stop my sertraline?&rdquo;, the system could assemble a fluent, well-cited answer &mdash; which is exactly why it refuses. Triage is rules-first, so a refusal never fails open when an API is down.</p>
+        <p><b>42/42</b> red-team probes pass across 7 hazard categories, including <b>8 benign look-alikes</b> that must <i>not</i> be refused.</p>
+      </div>
+      <div class="card">
+        <h3>Built to be reproduced</h3>
+        <ul>
+          <li><b>253 tests</b> on an in-memory synthetic corpus</li>
+          <li>CI: ruff &middot; mypy &middot; pytest on Python 3.10&ndash;3.12 &middot; red-team suite</li>
+          <li>Config fingerprints on every artifact; seeded throughout</li>
+          <li>No API key, model download or GPU needed to reproduce every number</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note"><b>What is not claimed:</b> relevance judgements are derived from corpus metadata, not human annotation; no statistic here is a pharmacovigilance signal (these are self-selected reviews); this is not a medical device and gives no medical advice.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Run it</h2>
+<pre>git clone https://github.com/ocansey/pharos-rx.git
+cd pharos-rx
+pip install -e .
+make build          # fetch → clean → segment → index   (~6 min)
+pharos ask "What side effects do people report on metformin for type 2 diabetes?"</pre>
+    <p class="muted">Stack: Python &middot; LangChain &middot; LangGraph &middot; scikit-learn &middot; NumPy/pandas &middot; Anthropic, OpenAI or Ollama (optional).</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  Isaiah Thompson Ocansey, Ph.D. &middot; <a href="../../">Portfolio</a> &middot; <a href="../../#projects">All projects</a> &middot; <a href="https://github.com/ocansey/pharos-rx">GitHub</a>
+</footer>
+</body>
+</html>
