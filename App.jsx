@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
 /* =====================================================================
-   Single source of truth: Résumé (September 2026).
+   Single source of truth: Résumé (October 2026, SMU postdoc version).
    Every figure below is copied from the résumé. Edit here, not in the JSX.
    ===================================================================== */
 
 const PROFILE = {
   name: "Isaiah Thompson Ocansey, Ph.D.",
-  title: "Data Scientist and Machine Learning Engineer",
-  location: "El Paso, TX",
+  title: "Postdoctoral Fellow, Machine Learning and Applied Research",
+  org: "O'Donnell Data Science and Research Computing Institute, Southern Methodist University",
+  location: "Dallas, TX",
   email: "ocanthom@gmail.com",
   resume: "Isaiah_Thompson_Ocansey_Resume.pdf",
   links: {
@@ -16,7 +17,8 @@ const PROFILE = {
     github: "https://github.com/ocansey",
     scholar: "https://scholar.google.com/citations?user=pen_i60AAAAJ&hl=en",
     researchgate: "https://www.researchgate.net/profile/Isaiah-Thompson-Ocansey-3",
-    arxiv: "https://arxiv.org/abs/2507.11071"
+    arxiv: "https://arxiv.org/abs/2507.11071",
+    arxivDp: "https://arxiv.org/abs/2604.19118"
   }
 };
 
@@ -31,39 +33,55 @@ const NAV = [
 ];
 
 const FACTS = [
-  ["98.83%", "anomaly-detection accuracy from LogTinyLLM, at 70% lower compute"],
-  ["14", "UT System institutions given real-time risk visibility"],
-  ["$1.2M", "annual revenue retained through analytics at AT&T"],
-  ["10", "publications on Google Scholar"]
+  ["7+ years", "building predictive models, anomaly detection and analytics"],
+  ["98.83%", "LogTinyLLM accuracy, updating fewer than 0.05% of parameters"],
+  ["98.76%", "DP-FLogTinyLLM accuracy without centralizing client data"],
+  ["$1.2M", "annual revenue retention supported at AT&T"]
 ];
 
 const EXPERIENCE = [
+  {
+    id: "smu",
+    title: "Postdoctoral Fellow",
+    focus: "Artificial Intelligence and Machine Learning",
+    org: "O'Donnell Data Science and Research Computing Institute (ODSRCI), Southern Methodist University",
+    short: "Southern Methodist University",
+    place: "Dallas, TX",
+    dates: "Oct 2026 – Present",
+    bullets: [
+      "Conduct applied research at the intersection of AI/ML and high-performance computing, focusing on resource-efficient AI, scalable distributed computing, and edge systems.",
+      "Design and evaluate machine learning approaches to estimate and optimize resource-efficiency parameters under complex, real-world conditions.",
+      "Collaborate with interdisciplinary researchers on institute initiatives using NVIDIA SuperPOD and campus HPC infrastructure, and mentor students."
+    ],
+    tools: ["Resource-efficient AI", "Distributed computing", "Edge systems", "NVIDIA SuperPOD", "HPC"]
+  },
   {
     id: "gra",
     title: "Graduate Research Assistant",
     focus: "Machine Learning and Quantitative Modeling",
     org: "University of Texas at El Paso, Department of Mathematical Sciences",
+    short: "University of Texas at El Paso",
     place: "El Paso, TX",
-    dates: "01/2022 – 12/2025",
+    dates: "Jan 2022 – Dec 2025",
     bullets: [
-      "Engineered LogTinyLLM, a compact transformer delivering 98.83% anomaly-detection accuracy at 70% lower compute cost than large-LLM baselines through LoRA fine-tuning; first-author paper under review (arXiv:2507.11071).",
-      "Designed a cross-silo federated learning pipeline with differential privacy, enabling institutions to train shared models on protected records without centralizing data; second paper under review.",
-      "Segmented 5,960 home equity borrowers across 13 risk variables using K-Means and hierarchical clustering; analysis projected a 35% reduction in credit default rates and a 15% lift in loan approval accuracy.",
-      "Accelerated experiment turnaround on multi-modal deep learning workloads by implementing distributed PyTorch training with mixed precision and FSDP sharding on TACC supercomputing infrastructure."
+      "Developed LogTinyLLM using LoRA fine-tuning of compact language models for contextual log anomaly detection; reported 98.83% accuracy versus 79.37% for a fully fine-tuned LogBERT baseline while updating fewer than 0.05% of parameters. First-author paper under review at IEEE Transactions on Neural Networks and Learning Systems (TNNLS).",
+      "Developed DP-FLogTinyLLM, a cross-silo federated learning framework with differential privacy that achieved 98.76% accuracy without centralizing client data. First-author paper under review.",
+      "Implemented distributed PyTorch training with mixed precision and FSDP on TACC supercomputers; mentored three undergraduate researchers whose work was presented publicly."
     ],
     tools: ["PyTorch", "LoRA", "Federated learning", "Differential privacy", "FSDP", "TACC"]
   },
   {
     id: "uts",
-    title: "Machine Learning and Data Engineering Intern",
-    focus: "",
+    title: "Information Technology Intern",
+    focus: "Machine Learning and Data Engineering",
     org: "University of Texas System",
+    short: "University of Texas System",
     place: "Austin, TX",
-    dates: "06/2025 – 08/2025",
+    dates: "Jun 2025 – Aug 2025",
     bullets: [
-      "Delivered real-time operational risk visibility to executives across 14 institutions by integrating 15+ ITSM data sources through REST APIs and Power Automate into Power BI.",
-      "Eliminated 15+ hours of manual processing weekly and improved audit readiness 25% by automating compliance tracking and audit reporting pipelines.",
-      "Identified $2M+ in federal AI grant opportunities by conducting a structured funding landscape analysis across federal grant databases, shaping system-wide AI investment priorities."
+      "Integrated 15+ IT service management (ITSM) sources across 14 institutions through REST APIs and Power Automate into Power BI reporting, improving operational-risk visibility and reducing project risk exposure by 30%.",
+      "Automated compliance reporting pipelines, saving 15+ hours of manual reporting each week and improving audit readiness by 25%.",
+      "Researched federal AI funding opportunities and identified more than $2M in potential grant opportunities."
     ],
     tools: ["REST APIs", "Power Automate", "Power BI", "Compliance automation"]
   },
@@ -72,26 +90,26 @@ const EXPERIENCE = [
     title: "Data Analytics Consultant",
     focus: "Strategic Decision Support",
     org: "University of Texas at El Paso, Graduate School",
+    short: "UTEP Graduate School",
     place: "El Paso, TX",
-    dates: "05/2023 – 08/2024",
+    dates: "May 2023 – Aug 2024",
     bullets: [
-      "Deployed student success forecasting models at 94% accuracy using ensemble and deep learning methods, equipping advisers with ranked at-risk cohorts early enough to intervene.",
-      "Advised the Board of Regents and senior leadership on enrollment policy and multimillion-dollar capital decisions; institutional enrollment rose 15%.",
-      "Cut ad-hoc reporting requests 40% by building self-service Power BI dashboards consolidating 10+ institutional KPIs."
+      "Built student-success forecasting models with 94% accuracy and provided analysis for Board of Regents enrollment-policy discussions, contributing to a reported 15% institutional enrollment increase.",
+      "Created self-service Power BI dashboards consolidating 10+ institutional KPIs, reducing ad hoc reporting by 40%."
     ],
-    tools: ["Ensemble models", "Deep learning", "Power BI", "Executive advisory"]
+    tools: ["Forecasting", "Power BI", "Executive advisory"]
   },
   {
     id: "att",
     title: "Technical Specialist",
     focus: "Quantitative Risk and Data Analytics",
     org: "AT&T Inc.",
+    short: "AT&T Inc.",
     place: "Prague, Czech Republic",
-    dates: "08/2018 – 12/2021",
+    dates: "Aug 2018 – Dec 2021",
     bullets: [
-      "Lifted Net Promoter Score 20% and retained $1.2M in annual revenue by leading customer experience analytics that isolated and resolved systemic service failures.",
-      "Directed a cross-functional team of 8 analysts deploying statistical process control across network operations, reducing service disruptions 15%.",
-      "Built large-scale SQL extraction and transformation pipelines powering enterprise KPI tracking and executive reporting."
+      "Led customer-experience analytics that identified systemic service failures, supporting $1.2M in annual revenue retention and a 20% increase in Net Promoter Score.",
+      "Led a team of eight analysts applying statistical process control across 500+ cell sites; reduced service disruptions by 15% and improved uptime/latency metrics by 18%."
     ],
     tools: ["SQL", "Statistical process control", "Customer analytics", "Team leadership"]
   }
@@ -120,9 +138,9 @@ const PROJECTS = [
     title: "Drift Arena",
     kind: "Live demo",
     summary:
-      "A live champion/challenger console for card-fraud detection: shadow scoring across 100% of traffic, PSI drift monitoring, adaptive traffic reallocation and McNemar-gated promotion.",
-    result: "Reproduces a fraud model whose recall collapses from 97% to 25%, then shows the monitoring that catches and corrects it.",
-    tags: ["MLOps", "Model monitoring", "Fraud detection"],
+      "A champion/challenger fraud-model monitoring workflow using Population Stability Index (PSI) drift detection and McNemar-test-gated promotion.",
+    result: "Reproduces recall degradation from 97% to 25% under an unseen attack profile, then shows the monitoring that catches it.",
+    tags: ["Model monitoring", "Drift detection", "Fraud detection"],
     pageLabel: "Open the live demo",
     code: "https://github.com/ocansey/drift-arena"
   },
@@ -131,9 +149,9 @@ const PROJECTS = [
     title: "The Label Budget",
     kind: "Live demo",
     summary:
-      "How many labels must be bought before a supervised detector beats an unsupervised one? Isolation Forest, gradient boosting and RBF-SVM built from first principles in about 500 lines.",
-    result: "Letting the unsupervised model choose which flows reach an analyst halves the label budget. 36 tests; runs entirely client-side.",
-    tags: ["Anomaly detection", "Active learning", "No libraries"],
+      "Isolation Forest, HistGradientBoosting and RBF-SVM approaches implemented from scratch to study unsupervised-guided sampling.",
+    result: "Demonstrates a path to cut labeled-data requirements by half. Runs entirely in your browser.",
+    tags: ["Anomaly detection", "Active learning", "From scratch"],
     pageLabel: "Open the live demo",
     code: "https://github.com/ocansey/label-budget"
   }
@@ -145,7 +163,9 @@ const PUBLICATIONS = [
     title: "DP-FLogTinyLLM: Differentially Private Federated Log Anomaly Detection Using Tiny LLMs",
     authors: "Ocansey, I.T., Sen, T., & Bhattacharya, R.",
     venue: "Under review",
-    status: "review"
+    status: "review",
+    link: PROFILE.links.arxivDp,
+    linkLabel: "arXiv:2604.19118"
   },
   {
     year: 2026,
@@ -163,9 +183,9 @@ const PUBLICATIONS = [
   },
   {
     year: 2025,
-    title: "LogTinyLLM: Contextual Log Anomaly Detection Using Tiny Large Language Models",
+    title: "LogTinyLLM: Tiny Large Language Models Based Contextual Log Anomaly Detection",
     authors: "Ocansey, I.T., Bhattacharya, R., & Sen, T.",
-    venue: "Under review, IEEE Transactions on Neural Networks and Learning Systems",
+    venue: "IEEE Transactions on Neural Networks and Learning Systems (under review)",
     status: "review",
     link: PROFILE.links.arxiv,
     linkLabel: "arXiv:2507.11071"
@@ -174,7 +194,7 @@ const PUBLICATIONS = [
     year: 2025,
     title: "Comparative Analysis of Hierarchical and K-Means Clustering Algorithms on Home Equity Loan Data",
     authors: "Ocansey, I.T.",
-    venue: "Under review, Journal of Statistical Computation and Simulation",
+    venue: "Journal of Statistical Computation and Simulation (under review)",
     status: "review"
   }
 ];
@@ -182,43 +202,47 @@ const PUBLICATIONS = [
 const SKILLS = [
   {
     group: "Machine learning and AI",
-    items: ["Machine Learning", "Deep Learning", "Large Language Models (LLMs)", "Natural Language Processing (NLP)", "Generative AI", "Anomaly Detection", "Predictive Modeling", "Federated Learning", "Model Compression", "LoRA Fine-Tuning", "Instruction Tuning", "Retrieval-Augmented Generation (RAG)"]
+    items: ["Predictive modeling", "Classification", "Deep learning", "Compact LLMs", "Transformers", "NLP", "Anomaly detection", "Feature engineering", "LoRA/parameter-efficient fine-tuning", "Federated learning", "Differential privacy", "Model compression"]
   },
   {
-    group: "Statistics and quantitative methods",
-    items: ["Statistical Inference", "Survival Analysis", "Time Series", "Hypothesis Testing", "Experimental Design", "Credit Risk Modeling", "Statistical Process Control"]
+    group: "Programming and data",
+    items: ["Python", "SQL", "R", "Bash", "Data mining", "Data cleaning", "pandas", "NumPy", "scikit-learn", "XGBoost", "PyTorch", "TensorFlow", "Hugging Face Transformers"]
   },
   {
-    group: "Programming and data engineering",
-    items: ["Python", "SQL", "R", "Bash", "LaTeX", "PyTorch", "TensorFlow", "Keras", "Hugging Face Transformers", "Power BI", "Power Automate", "REST APIs"]
+    group: "Statistics and experimentation",
+    items: ["Statistical inference", "Hypothesis testing", "A/B testing", "Experimental design", "Survival analysis", "Time series", "Statistical process control"]
   },
   {
-    group: "MLOps and infrastructure",
-    items: ["MLOps", "Model Monitoring", "Distributed Training", "FSDP", "Mixed Precision", "Gradient Checkpointing", "AWS", "Microsoft Azure", "Azure ML", "Apache Spark", "Docker", "Git", "Linux", "Slurm/HPC (TACC)"]
+    group: "ML engineering and infrastructure",
+    items: ["Model monitoring", "Drift detection", "Distributed training", "FSDP", "Mixed precision", "Docker", "Git", "CI/CD", "Linux", "Slurm", "GPU computing", "HPC"]
+  },
+  {
+    group: "Cloud and analytics",
+    items: ["AWS", "Microsoft Azure", "Azure ML", "Apache Spark", "REST APIs", "ETL pipelines", "Power BI", "Tableau"]
   }
 ];
 
 const EDUCATION = [
   {
-    date: "05/2026",
+    date: "May 2026",
     degree: "Ph.D., Data Science",
     school: "University of Texas at El Paso",
-    detail: "Dissertation: Multi-Modal Anomaly Detection Using Deep Learning Techniques. Advisor: Dr. Ritwik Bhattacharya."
+    detail: "Dissertation: “Multi-Modal Anomaly Detection Using Deep Learning Techniques.” Advisor: Dr. Ritwik Bhattacharya."
   },
   {
-    date: "09/2017",
-    degree: "M.S., Mathematics of Finance and Economics",
+    date: "2017",
+    degree: "M.Sc., Mathematics of Finance and Economics",
     school: "University of Silesia, Poland",
-    detail: "Thesis: Affine Interest Rate Models: term structure, no-arbitrage bond pricing, yield curve dynamics."
+    detail: "Thesis: Affine Interest Rate Models."
   },
   {
-    date: "09/2017",
-    degree: "M.S., Engineering Mathematics",
-    school: "University of L'Aquila, Italy",
+    date: "2017",
+    degree: "M.Sc., Engineering Mathematics",
+    school: "University of L’Aquila, Italy",
     detail: ""
   },
   {
-    date: "04/2015",
+    date: "2015",
     degree: "B.S., Financial Mathematics",
     school: "University for Development Studies, Ghana",
     detail: ""
@@ -311,16 +335,18 @@ function Hero() {
         <div>
           <h1>{PROFILE.name}</h1>
           <p className="role">{PROFILE.title}</p>
+          <p className="org">{PROFILE.org}</p>
           <p className="intro">
             Welcome, and thank you for stopping by. I build machine learning systems that notice when
             something is wrong, explain why, and hold up when the data shifts underneath them.
           </p>
           <p className="intro-2">
-            My Ph.D. at the University of Texas at El Paso focused on anomaly detection with compact language
-            models and privacy-preserving federated learning. Before research, I spent three years turning
-            network data into decisions at AT&amp;T in Prague, and I have since advised university leadership
-            and built executive risk reporting for the University of Texas System. If you are hiring, collaborating
-            or just curious, I would be glad to hear from you.
+            I am a Postdoctoral Fellow in Artificial Intelligence and Machine Learning at Southern Methodist
+            University's O'Donnell Data Science and Research Computing Institute in Dallas, working on
+            resource-efficient AI, scalable distributed computing and edge systems. My Ph.D. at the University of
+            Texas at El Paso produced LogTinyLLM and its privacy-preserving federated successor, and before research
+            I spent three years in quantitative risk analytics at AT&amp;T in Prague. Whether you are hiring,
+            looking to collaborate or just curious, I would be glad to hear from you.
           </p>
           <div className="hero-actions">
             <a className="btn btn-brass" href="#experience">See my experience</a>
@@ -373,28 +399,29 @@ function About() {
         <div>
           <div className="head"><h2 id="about-h">About me</h2></div>
           <p>
-            I am a data scientist with a Ph.D. in Data Science and a background in mathematics, finance and
-            engineering mathematics from Ghana, Poland and Italy. The thread through my work is simple: find the
-            signal that matters, measure it honestly, and put it in front of the people who decide.
+            I am an applied machine learning researcher with 7+ years of experience developing predictive models,
+            anomaly-detection methods and analytics workflows across research, business and quantitative-risk
+            settings. My training is in data science, financial mathematics and engineering mathematics, earned in
+            Ghana, Poland, Italy and Texas. The thread through my work is simple: find the signal that matters,
+            measure it honestly, and put it in front of the people who decide.
           </p>
           <p>
-            In research that has meant LogTinyLLM, a compact transformer that reaches 98.83% anomaly-detection
-            accuracy at 70% lower compute than large-LLM baselines, and a federated pipeline that lets institutions
-            learn from protected records without pooling them. In practice it has meant forecasting models advisers
-            actually used, dashboards that cut reporting requests by 40%, and analytics that retained $1.2M in
-            annual revenue.
+            In research that has meant LogTinyLLM, which reported 98.83% accuracy on log anomaly detection while
+            updating fewer than 0.05% of model parameters, and DP-FLogTinyLLM, which reached 98.76% without
+            centralizing client data. In practice it has meant forecasting models with 94% accuracy, dashboards that
+            reduced ad hoc reporting by 40%, and analytics that supported $1.2M in annual revenue retention.
           </p>
           <p>
             I care about work that is reproducible and explained, from the test suite to the limitations section.
           </p>
         </div>
         <ul className="places" aria-label="At a glance">
-          <li><span>Based in</span><span>El Paso, Texas</span></li>
-          <li><span>Focus</span><span>Anomaly detection, LLMs, federated learning, risk analytics</span></li>
-          <li><span>Ph.D.</span><span>Data Science, UTEP, 05/2026</span></li>
+          <li><span>Now</span><span>Postdoctoral Fellow, SMU O'Donnell Institute</span></li>
+          <li><span>Based in</span><span>Dallas, Texas</span></li>
+          <li><span>Focus</span><span>Resource-efficient AI, anomaly detection, compact LLMs, federated learning</span></li>
+          <li><span>Ph.D.</span><span>Data Science, UTEP, May 2026</span></li>
           <li><span>Industry</span><span>AT&amp;T, University of Texas System</span></li>
-          <li><span>Compute</span><span>Affiliate, Texas Advanced Computing Center</span></li>
-          <li><span>Worked in</span><span>United States, Czech Republic, Poland, Italy, Ghana</span></li>
+          <li><span>Compute</span><span>NVIDIA SuperPOD, TACC supercomputers</span></li>
         </ul>
       </div>
     </section>
@@ -433,7 +460,7 @@ function Experience() {
                   onKeyDown={(e) => onKey(e, i)}
                 >
                   <span className="t">{r.title}</span>
-                  <span className="o">{r.org.split(",")[0]}</span>
+                  <span className="o">{r.short}</span>
                   <span className="d num">{r.dates}</span>
                 </button>
               </li>
@@ -517,7 +544,7 @@ function Research() {
       <div className="wrap">
         <div className="head">
           <h2 id="rs-h">Research and publications</h2>
-          <p>Selected work on anomaly detection, private learning and AI in healthcare. The complete record of 10 publications is on Google Scholar.</p>
+          <p>Selected work on anomaly detection, private learning and AI in healthcare. The complete record is on Google Scholar.</p>
         </div>
         <div className="filters" role="group" aria-label="Filter publications">
           {opts.map(([k, l]) => (
@@ -616,7 +643,7 @@ function Contact() {
       <div className="wrap">
         <h2 id="ct-h">Let's talk</h2>
         <p>
-          I am open to data scientist and machine learning engineer roles, and to research collaborations.
+          I welcome conversations about data science and machine learning roles, applied research and collaborations.
           Email is the fastest way to reach me.
         </p>
         <div className="contact-grid">
